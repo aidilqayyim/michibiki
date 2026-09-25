@@ -1,7 +1,7 @@
 {
-  "name": "opportuniu",
+  "name": "michibiki",
   "version": "0.1.0",
-  "homepage": "https://aidilqayyim.github.io/OpportuniU",
+  "homepage": "/",
   "private": true,
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",
