@@ -7,15 +7,15 @@ let inflight = null;
 
 // WMO weather codes grouped into the conditions the app shows.
 export function weatherInfo(code, isDay = true) {
-  if (code === 0) return isDay ? { label: 'Clear', icon: 'sun', color: '#facc15' } : { label: 'Clear', icon: 'moon', color: '#c7d2fe' };
-  if (code === 1 || code === 2) return isDay ? { label: 'Partly cloudy', icon: 'cloud-sun', color: '#fde68a' } : { label: 'Partly cloudy', icon: 'cloud', color: '#cbd5e1' };
-  if (code === 3) return { label: 'Overcast', icon: 'cloud', color: '#cbd5e1' };
-  if (code === 45 || code === 48) return { label: 'Fog', icon: 'cloud-fog', color: '#94a3b8' };
-  if (code >= 51 && code <= 57) return { label: 'Drizzle', icon: 'cloud-drizzle', color: '#7dd3fc' };
-  if (code >= 61 && code <= 67 || code >= 80 && code <= 82) return { label: 'Rain', icon: 'cloud-rain', color: '#60a5fa' };
-  if (code >= 71 && code <= 77 || code === 85 || code === 86) return { label: 'Snow', icon: 'cloud-snow', color: '#e0f2fe' };
-  if (code >= 95 && code <= 99) return { label: 'Thunderstorm', icon: 'cloud-lightning', color: '#c084fc' };
-  return { label: 'Unknown', icon: 'cloud', color: '#94a3b8' };
+  if (code === 0) return isDay ? { label: 'Clear', icon: 'sun', color: '#d97706' } : { label: 'Clear', icon: 'moon', color: '#4f46e5' };
+  if (code === 1 || code === 2) return isDay ? { label: 'Partly cloudy', icon: 'cloud-sun', color: '#d97706' } : { label: 'Partly cloudy', icon: 'cloud', color: '#64748b' };
+  if (code === 3) return { label: 'Overcast', icon: 'cloud', color: '#64748b' };
+  if (code === 45 || code === 48) return { label: 'Fog', icon: 'cloud-fog', color: '#64748b' };
+  if (code >= 51 && code <= 57) return { label: 'Drizzle', icon: 'cloud-drizzle', color: '#0284c7' };
+  if (code >= 61 && code <= 67 || code >= 80 && code <= 82) return { label: 'Rain', icon: 'cloud-rain', color: '#2563eb' };
+  if (code >= 71 && code <= 77 || code === 85 || code === 86) return { label: 'Snow', icon: 'cloud-snow', color: '#0891b2' };
+  if (code >= 95 && code <= 99) return { label: 'Thunderstorm', icon: 'cloud-lightning', color: '#7c3aed' };
+  return { label: 'Unknown', icon: 'cloud', color: '#64748b' };
 }
 
 function located(nodes) {

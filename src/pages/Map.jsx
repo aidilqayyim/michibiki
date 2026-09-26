@@ -1,28 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, Animated, AccessibilityInfo, Pressable, StyleSheet } from 'react-native';
-import MapView, { Marker, Polyline } from 'react-native-maps';
+import { View, Animated, AccessibilityInfo, Pressable, StyleSheet } from 'react-native';
+import MapView, { Marker, Polyline } from '../components/NativeMap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useIsFocused } from '@react-navigation/native';
 import { useMesh } from '../data/MeshProvider';
 import { getTrackingLogs, formatLogDate, formatLogTime } from '../data/trackingLogs';
 import EmergencyButton from '../components/EmergencyButton';
-import { Icon, colors } from '../ui';
+import { Icon, colors, Text } from '../ui';
 import Svg, { Defs, LinearGradient, Stop, Rect, Path } from 'react-native-svg';
 import MapNodeBrowser from '../components/MapNodeBrowser';
 import WarningLogs from '../components/WarningLogs';
 import { useWeather } from '../data/weather';
 import { signalInfo } from '../utils/display';
-const weatherIconColor = icon => ({
-  sun: '#d97706',
-  moon: '#4f46e5',
-  'cloud-sun': '#d97706',
-  cloud: '#64748b',
-  'cloud-fog': '#64748b',
-  'cloud-drizzle': '#0284c7',
-  'cloud-rain': '#2563eb',
-  'cloud-snow': '#0891b2',
-  'cloud-lightning': '#7c3aed'
-})[icon] || '#64748b';
+import { useDemo } from '../data/DemoProvider';
+import DemoControls from '../components/DemoControls';
+import SimulatedNode from '../components/SimulatedNode';
 const coordinate = n => ({
   latitude: Number(n.lat),
   longitude: Number(n.lng)
@@ -157,6 +149,8 @@ export default function Map({
     user,
     warningLogs = []
   } = useMesh();
+  const { simulation } = useDemo();
+  const simulationNodeId = simulation.kind === 'range' && ['retrying', 'sending', 'sent', 'error'].includes(simulation.phase) ? simulation.nodeId : null;
   const weather = useWeather(nodes);
   const insets = useSafeAreaInsets();
   const focused = useIsFocused();
@@ -235,6 +229,18 @@ export default function Map({
   // Opened from an emergency alert: focus the device that raised it.
   const focusNodeId = route.params?.focusNodeId;
   useEffect(() => {
+    if (!simulationNodeId || !focused) return;
+    setSelected(null);
+    setLegend(false);
+    setWarningsOpen(false);
+    if (date) navigation.setParams({ historyDate: undefined, historyNode: undefined });
+    if (!ready) return;
+    const node = nodes.find(item => item.id === simulationNodeId);
+    if (node && valid(node)) map.current?.animateToRegion({ ...coordinate(node), latitudeDelta: 0.012, longitudeDelta: 0.012 }, 450);
+    // Follow the simulated device once, not on every retry count or data refresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [simulationNodeId, focused, ready]);
+  useEffect(() => {
     if (!ready || !focusNodeId) return;
     navigation.setParams({
       focusNodeId: undefined
@@ -287,7 +293,7 @@ export default function Map({
         ...node,
         type: 'node'
       })}>
-     {node.id === boundId ? <DeviceDot pulse={pulse} active={focused} /> : <NodeDot node={node} active={focused} />}
+     {node.id === simulationNodeId ? <SimulatedNode node={node} simulation={simulation} /> : node.id === boundId ? <DeviceDot pulse={pulse} active={focused} /> : <NodeDot node={node} active={focused} />}
     </Marker>)}
     {!!date && nodes.map(node => {
         const points = history.filter(entry => entry.nodeId === node.id);
@@ -307,14 +313,14 @@ export default function Map({
    <View pointerEvents="none" style={[styles.topShade, {
       height: insets.top + 155
     }]}>
-    <Svg width="100%" height="100%"><Defs><LinearGradient id="topShade" x1="0" y1="0" x2="0" y2="1"><Stop offset="0" stopColor="#000" stopOpacity={.65} /><Stop offset="1" stopColor="#000" stopOpacity={0} /></LinearGradient></Defs><Rect width="100%" height="100%" fill="url(#topShade)" /></Svg>
+    <Svg width="100%" height="100%"><Defs><LinearGradient id="topShade" x1="0" y1="0" x2="0" y2="1"><Stop offset="0" stopColor={colors.bg} stopOpacity={.85} /><Stop offset="1" stopColor={colors.bg} stopOpacity={0} /></LinearGradient></Defs><Rect width="100%" height="100%" fill="url(#topShade)" /></Svg>
    </View>
    <View pointerEvents="none" style={[styles.logo, {
       top: insets.top + 18
     }]}>
-    <Svg width={35} height={35} viewBox="0 0 40 40" fill="none" stroke="#73e69b" strokeWidth={3} strokeLinecap="round"><Path d="M5 30 17 9M17 30 28 11 38 30" /></Svg>
+    <Svg width={35} height={35} viewBox="0 0 40 40" fill="none" stroke={colors.green} strokeWidth={3} strokeLinecap="round"><Path d="M5 30 17 9M17 30 28 11 38 30" /></Svg>
    </View>
-   {(date || notice) && <View style={[styles.topPanel, {
+   {!!(date || notice) && <View style={[styles.topPanel, {
       top: insets.top + 90
     }]}>
     {date ? <><Text style={styles.blue}>Tracking history · {historyNode === 'all' ? 'All nodes' : historyNode}</Text>
@@ -334,11 +340,11 @@ export default function Map({
    {selected && <View style={[styles.details, {
       bottom: bottom + 116
     }]}>
-    <View style={styles.detailHeader}><Text style={styles.detailTitle}>{selected.type === 'log' ? selected.nodeId + ' · ' + formatLogDate(selected.date) : selected.name + (selected.id === boundId ? ' (Your device)' : '')}</Text><Pressable accessibilityRole="button" accessibilityLabel="Close node details" onPress={() => setSelected(null)} hitSlop={10}><Icon name="close" color="#666" size={20} /></Pressable></View>
+    <View style={styles.detailHeader}><Text style={styles.detailTitle}>{selected.type === 'log' ? selected.nodeId + ' · ' + formatLogDate(selected.date) : selected.name + (selected.id === boundId ? ' (Your device)' : '')}</Text><Pressable accessibilityRole="button" accessibilityLabel="Close node details" onPress={() => setSelected(null)} hitSlop={10}><Icon name="close" color={colors.muted} size={20} /></Pressable></View>
     {selected.type === 'log' ? <Text style={styles.detailText}>{formatLogTime(selected.timestamp)} · {selected.rssi} dBm</Text> : <>
-     <Text style={styles.detailText}>Role: {selected.role || 'Unknown'}</Text><Text style={styles.detailText}>Battery: {selected.battery ?? '—'}%</Text><Text style={styles.detailText}>Signal: {selected.signal}</Text><Text style={styles.detailText}>Mesh hops: {selected.hops ?? 0}</Text><Text style={styles.detailText}>Last seen: {selected.last_seen ? new Date(selected.last_seen).toLocaleString() : 'Unknown'}</Text>
+     <Text style={styles.detailText}>Role: {selected.role || 'Unknown'}</Text><Text style={styles.detailText}>Battery: {selected.battery ?? '—'}%</Text><Text style={styles.detailText}>Signal: {selected.id === simulationNodeId ? 'Unable to emit signal' : selected.signal}</Text><Text style={styles.detailText}>Mesh hops: {selected.hops ?? 0}</Text><Text style={styles.detailText}>Last seen: {selected.last_seen ? new Date(selected.last_seen).toLocaleString() : 'Unknown'}</Text>
      <View style={styles.weatherRow}>
-      <Icon name={weather[selected.id]?.icon || 'cloud'} size={18} color={weather[selected.id] ? weatherIconColor(weather[selected.id].icon) : '#999'} />
+      <Icon name={weather[selected.id]?.icon || 'cloud'} size={18} color={weather[selected.id]?.color || colors.faint} />
       <Text style={styles.detailText}>{weather[selected.id] ? weather[selected.id].label + ' · ' + weather[selected.id].temperature + '°C · wind ' + weather[selected.id].wind + ' km/h' : selected.id in weather ? 'Weather unavailable' : 'Loading weather…'}</Text>
      </View>
     </>}
@@ -360,7 +366,7 @@ export default function Map({
         setLegend(true);
       }} style={({
         pressed
-      }) => [styles.control, pressed && styles.controlPressed]}><Icon name={legend ? 'close' : 'list'} size={23} color="#fff" /></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Open warning logs" accessibilityState={{
+      }) => [styles.control, pressed && styles.controlPressed]}><Icon name={legend ? 'close' : 'list'} size={23} color={colors.text} /></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Open warning logs" accessibilityState={{
         expanded: warningsOpen
       }} onPress={() => {
         setSelected(null);
@@ -368,20 +374,21 @@ export default function Map({
         setWarningsOpen(true);
       }} style={({
         pressed
-      }) => [styles.control, pressed && styles.controlPressed]}><Icon name="bell" size={22} color="#fca5a5" />{warningLogs.some(alert => alert.status === 'active') && <View style={styles.warningDot} />}</Pressable></View>
+      }) => [styles.control, pressed && styles.controlPressed]}><Icon name="bell" size={22} color={colors.red} />{warningLogs.some(alert => alert.status === 'active') && <View style={styles.warningDot} />}</Pressable></View>
    <View style={[styles.rightControls, {
       bottom
     }]}><Pressable accessibilityRole="button" accessibilityLabel={date ? 'Fit tracking history' : 'Locate connected device'} onPress={center} style={({
         pressed
-      }) => [styles.control, pressed && styles.controlPressed]}><Icon name="crosshair" size={23} color={own ? '#c084fc' : '#fff'} /></Pressable><EmergencyButton compact style={styles.control} onOpen={closePanels} /></View>
+      }) => [styles.control, pressed && styles.controlPressed]}><Icon name="crosshair" size={23} color={own ? colors.purple : colors.text} /></Pressable><EmergencyButton compact style={styles.control} onOpen={closePanels} /></View>
    <WarningLogs visible={warningsOpen} onClose={() => setWarningsOpen(false)} alerts={warningLogs} nodes={nodes} boundId={boundId} userId={user?.id} onSelect={showNode} />
    <MapNodeBrowser visible={legend} onClose={() => setLegend(false)} nodes={nodes} boundId={boundId} onSelect={showNode} />
+   <DemoControls top={insets.top + 18} onStart={() => { closePanels(); if (date) navigation.setParams({ historyDate: undefined, historyNode: undefined }); }} />
   </View>;
 }
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#000'
+    backgroundColor: colors.bg
   },
   offlineRing: {
     position: 'absolute',
@@ -426,8 +433,8 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: '#ffffff26',
-    backgroundColor: '#00000073',
+    borderColor: colors.border,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center'
   },
@@ -438,28 +445,29 @@ const styles = StyleSheet.create({
     maxWidth: 384,
     padding: 12,
     borderRadius: 16,
-    backgroundColor: '#000000bf',
+    backgroundColor: '#fffffff2',
     borderWidth: 1,
-    borderColor: '#ffffff1a'
+    borderColor: colors.border
   },
   blue: {
-    color: '#93c5fd',
+    color: colors.blue,
+    fontWeight: '600',
     fontSize: 12
   },
   locationStatus: {
-    color: '#ffffffb3',
+    color: colors.muted,
     fontSize: 12,
     lineHeight: 18
   },
   historyTitle: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 16,
     fontWeight: '700',
     marginTop: 4
   },
   caption: {
     fontSize: 12,
-    color: '#ffffff80',
+    color: colors.muted,
     marginTop: 4,
     lineHeight: 18
   },
@@ -488,21 +496,21 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#ffffff40',
-    backgroundColor: '#181b20e6',
+    borderColor: colors.border,
+    backgroundColor: '#fffffff2',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
+    shadowColor: '#2b2118',
     shadowOffset: {
       width: 0,
       height: 4
     },
-    shadowOpacity: .22,
+    shadowOpacity: .16,
     shadowRadius: 9,
     elevation: 4
   },
   controlPressed: {
-    backgroundColor: '#3e434cf2'
+    backgroundColor: colors.cardAlt
   },
   details: {
     position: 'absolute',
@@ -510,7 +518,9 @@ const styles = StyleSheet.create({
     right: 24,
     maxWidth: 380,
     borderRadius: 16,
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: 18,
     gap: 4
   },
@@ -524,7 +534,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontWeight: '700',
-    color: '#111'
+    color: colors.text
   },
   weatherRow: {
     flexDirection: 'row',
@@ -535,7 +545,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     minHeight: 44,
     borderRadius: 14,
-    backgroundColor: '#111827',
+    backgroundColor: colors.blue,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -553,12 +563,12 @@ const styles = StyleSheet.create({
     width: 9,
     height: 9,
     borderRadius: 5,
-    backgroundColor: '#ef4444',
+    backgroundColor: '#dc2626',
     borderWidth: 1.5,
-    borderColor: '#181b20'
+    borderColor: '#fff'
   },
   detailText: {
-    color: '#555',
+    color: colors.muted,
     fontSize: 13,
     lineHeight: 19
   }

@@ -1,10 +1,10 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { ensureIdentity, writeBinding, writeLocation, writeRole, insertRow, createChannelRows } from "./api";
+import { ensureIdentity, writeBinding, writeRole, insertRow, createChannelRows, insertDemoEmergency } from "./api";
 import { loadMesh } from "./MeshQueries";
 import { supabase } from "../supabaseClient";
-import { AppState, View, Text, ActivityIndicator } from "react-native";
+import { AppState, View, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Button, Note, s } from "../ui";
+import { Button, Note, s, colors, Text } from "../ui";
 const MeshContext = createContext(null);
 export function useMesh() {
   const value = useContext(MeshContext);
@@ -124,17 +124,6 @@ export default function MeshProvider({
       setBusy(false);
     }
   };
-  const boundId = data?.boundId;
-  const saveLocation = useCallback(async (nodeId, coords) => {
-    if (nodeId !== boundId) throw new Error("Bind this device before saving its location.");
-    const node = await writeLocation(nodeId, coords);
-    ++revision.current;
-    refreshing.current = false;
-    setData(previous => ({
-      ...previous,
-      nodes: previous.nodes.map(item => item.id === nodeId ? node : item)
-    }));
-  }, [boundId]);
   const sendEmergency = async () => {
     const node = data.nodes.find(item => item.id === data.boundId);
     const alert = await insertRow("emergency_alerts", {
@@ -151,6 +140,22 @@ export default function MeshProvider({
       alerts: [alert, ...previous.alerts],
       warningLogs: [alert, ...(previous.warningLogs || []).filter(item => item.id !== alert.id)]
     }));
+    return alert;
+  };
+  const sendDemoEmergency = async ({ id, nodeId, reason }) => {
+    if (!data.boundId) throw new Error('Connect a device before starting monitoring.');
+    const node = data.nodes.find(item => item.id === nodeId);
+    if (!node) throw new Error('The selected device is no longer available.');
+    const alert = await insertDemoEmergency({ id, user_id: user.id, node_id: node.id,
+      lat: node.lat ?? null, lng: node.lng ?? null, is_demo: true, message: reason });
+    ++revision.current;
+    refreshing.current = false;
+    seenAlerts.current.add(alert.id);
+    // The controlling phone is a recipient when the simulated emergency comes from another node.
+    if (node.id !== data.boundId) setIncomingAlerts(current => current.some(item => item.id === alert.id) ? current : [...current, alert]);
+    setData(previous => ({ ...previous,
+      alerts: [alert, ...previous.alerts.filter(item => item.id !== alert.id)],
+      warningLogs: [alert, ...(previous.warningLogs || []).filter(item => item.id !== alert.id)] }));
     return alert;
   };
   const sendMessage = async ({
@@ -193,7 +198,7 @@ export default function MeshProvider({
   if (!data) return <SafeAreaView style={[s.screen, {
     justifyContent: 'center',
     padding: 24
-  }]}><Text style={s.title}>Michibiki</Text><Note error={!!error}>{error || "Connecting to your mesh..."}</Note>{error ? <Button title="Retry connection" onPress={refresh} /> : <ActivityIndicator color="#79aaff" />}</SafeAreaView>;
+  }]}><Text style={s.title}>Michibiki</Text><Note error={!!error}>{error || "Connecting to your mesh..."}</Note>{error ? <Button title="Retry connection" onPress={refresh} /> : <ActivityIndicator color={colors.blue} />}</SafeAreaView>;
   return <MeshContext.Provider value={{
     ...data,
     user,
@@ -201,15 +206,15 @@ export default function MeshProvider({
     error,
     refresh,
     bindDevice,
-    saveLocation,
     sendEmergency,
+    sendDemoEmergency,
     sendMessage,
     createChannel,
     incomingAlerts,
     dismissAlert
   }}>
-    {error && <SafeAreaView edges={['top']} style={{
-      backgroundColor: '#401c24',
+    {!!error && <SafeAreaView edges={['top']} style={{
+      backgroundColor: colors.redSoft,
       paddingHorizontal: 16
     }}><View><Note error>Showing last loaded data. {error}</Note><Button title="Retry" onPress={refresh} /></View></SafeAreaView>}
     {children}

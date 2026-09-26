@@ -4,6 +4,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react-nativ
 import Map from './Map';
 import { useMesh } from '../data/MeshProvider';
 import { meshFixture } from '../test/meshFixture';
+import { useDemo } from '../data/DemoProvider';
+jest.mock('../data/DemoProvider', () => ({ useDemo: jest.fn() }));
 const mockAnimate = jest.fn();
 const mockFit = jest.fn();
 jest.mock('../data/MeshProvider', () => ({
@@ -33,11 +35,20 @@ jest.mock('react-native-maps', () => {
 let data;
 beforeEach(() => {
   jest.clearAllMocks();
+  useDemo.mockReturnValue({ simulation: { phase: 'idle' }, enabled: false });
   data = {
     ...meshFixture(),
     boundId: 'A07'
   };
   useMesh.mockReturnValue(data);
+});
+
+test('the bound device shows the retry warning while other nodes stay unaffected', async () => {
+  useDemo.mockReturnValue({ simulation: { kind: 'range', phase: 'retrying', nodeId: 'A07', attempt: 3 }, enabled: false });
+  await render(<Map route={{}} navigation={{ navigate: jest.fn(), setParams: jest.fn() }} />);
+  expect(screen.getByTestId('simulated-node-A07')).toBeTruthy();
+  expect(screen.getByText('Retrying... x3')).toBeTruthy();
+  expect(screen.queryByTestId('simulated-node-B12')).toBeNull();
 });
 test('recenter targets the bound device and other markers have node IDs', async () => {
   await render(<Map route={{}} navigation={{
@@ -116,4 +127,16 @@ test('node details show weather and open track logs; warning logs list alerts', 
   await fireEvent.press(screen.getByLabelText('Open warning logs'));
   expect(screen.getByText('Warning Logs')).toBeTruthy();
   expect(screen.getByText('Michibiki B12')).toBeTruthy();
+});
+
+test('without a bound device, logs stay open but warnings cannot be sent', async () => {
+  const navigation = { navigate: jest.fn(), setParams: jest.fn() };
+  data.boundId = null;
+  await render(<Map route={{}} navigation={navigation} />);
+  expect(screen.getByLabelText('Emergency').props.accessibilityState.disabled).toBe(true);
+  await fireEvent.press(screen.getAllByTestId('marker')[1]);
+  await fireEvent.press(screen.getByLabelText('Track logs for B12'));
+  expect(navigation.navigate).toHaveBeenCalledWith('Logs', { nodeId: 'B12' });
+  await fireEvent.press(screen.getByLabelText('Open warning logs'));
+  expect(screen.getByText('Warning Logs')).toBeTruthy();
 });

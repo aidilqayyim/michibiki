@@ -1,9 +1,9 @@
-﻿import React from 'react';
+import React from 'react';
 import {render,screen,fireEvent,waitFor} from '@testing-library/react-native';
 import App from './App';
 import {meshFixture} from './test/meshFixture';
 import {loadMesh} from './data/MeshQueries';
-jest.mock('./data/api',()=>({ensureIdentity:async()=>({id:'test-user'}),writeBinding:jest.fn(),writeLocation:jest.fn(),insertRow:jest.fn()}));
+jest.mock('./data/api',()=>({ensureIdentity:async()=>({id:'test-user'}),writeBinding:jest.fn(),insertRow:jest.fn()}));
 jest.mock('./data/MeshQueries',()=>({loadMesh:jest.fn()}));
 jest.mock('react-native-maps',()=>{
  const React=require('react');const {View}=require('react-native');

@@ -4,9 +4,9 @@ The app reads Supabase through explicit `.from(...).select(...)` queries in `src
 
 Set `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (or `EXPO_PUBLIC_SUPABASE_ANON_KEY`) in `.env`, then restart the development server. No Supabase sign-in is used. An installation UUID in AsyncStorage identifies bindings and alerts; it is not authentication.
 
-For a fresh database, run `hackathon.sql`. If you previously ran the authenticated version, `no-auth.sql` supplies anonymous API grants and removes the auth.users foreign keys. If your database predates channel creation, run `channels.sql` to add the `channel_members` table and the channel insert grants. Run `roles.sql` to allow the Base Station role and let the Connect screen change a device's role. Run `realtime.sql` so new messages and emergency alerts reach other phones instantly. SELECT calls still require database permissions; frontend code cannot grant these. Neither script is executed by the app. No RLS policies are created.
+For a fresh database, run `hackathon.sql`. For an existing database, run `upgrade.sql`: it removes the old sign-in links, adds device roles and channel membership, applies the API grants the app needs, and turns on Realtime for messages and emergency alerts. It is safe to rerun. SELECT calls still require database permissions; frontend code cannot grant these. Neither script is run by the app. No RLS policies are created.
 
-Nodes, tracking logs, channels, and messages come from the database. Bindings, messages, and confirmed demo alerts are saved to Supabase. Phone GPS updates the bound node's latest position. It does not create tracking logs with invented RSSI; tracking history reads existing database readings. Dates are grouped in Asia/Tokyo to match the seeded history.
+Nodes, tracking logs, channels, and messages come from the database. Bindings, messages, and confirmed alerts are saved to Supabase. Tracking history reads existing database readings; no RSSI values are invented. Dates are grouped in Asia/Tokyo to match the seeded history.
 
 Supabase stores app data only. Bluetooth pairing, LoRa transmission, and contacting emergency services are not implemented.
 

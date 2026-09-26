@@ -57,7 +57,6 @@ export function meshFixture() {
       id: "test-user"
     },
     refresh: jest.fn(),
-    saveLocation: jest.fn().mockResolvedValue(undefined),
     sendEmergency: jest.fn().mockResolvedValue({
       id: "alert"
     })

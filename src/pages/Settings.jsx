@@ -1,7 +1,7 @@
-﻿import React from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useMesh } from '../data/MeshProvider';
-import { Icon, Screen } from '../ui';
+import { Icon, Screen, colors, Text } from '../ui';
 
 const settingsRows = [
   { title: 'About Michibiki', icon: 'info', action: 'about' },
@@ -19,10 +19,10 @@ export default function Settings({ navigation }) {
   function openSetting(action) {
     switch (action) {
       case 'about':
-        Alert.alert('About Michibiki', 'Guidance for your mesh. A hackathon companion for LoRa location tracking across forests and other environments.');
+        Alert.alert('About Michibiki', 'Guidance for your mesh. A companion for LoRa location tracking across forests and other environments.');
         break;
       case 'help':
-        Alert.alert('Help & Documentation', 'Connect a device, then open Map. The arrow locates your bound device. Phone GPS is optional. Tracking logs show previously recorded positions. Messages and emergency alerts are saved to Supabase; radio delivery is not implemented.');
+        Alert.alert('Help & Documentation', 'Connect a device, then open Map. The arrow locates your bound device. Tracking logs show previously recorded positions. Messages and emergency alerts are saved to Supabase; radio delivery is not implemented.');
         break;
       case 'nodes':
         navigation.navigate('Nodes');
@@ -59,10 +59,10 @@ export default function Settings({ navigation }) {
             ]}
           >
             <View style={styles.icon}>
-              <Icon name={item.icon} size={20} color="#3b82f6" />
+              <Icon name={item.icon} size={20} color={colors.blue} />
             </View>
             <Text style={styles.rowTitle}>{item.title}</Text>
-            <Icon name="chevron" size={20} color="rgba(255,255,255,0.25)" />
+            <Icon name="chevron" size={20} color={colors.faint} />
           </Pressable>
         ))}
       </View>
@@ -81,7 +81,7 @@ export default function Settings({ navigation }) {
           </Pressable>
         </View>
         <Text style={[styles.dataText, styles.firstLine]}>
-          {nodes.length} devices in Supabase
+          {nodes.length} devices found on the mesh.
         </Text>
         <Text style={styles.dataText}>Bound device: {boundId || 'None'}</Text>
         <Text style={styles.dataText}>
@@ -100,7 +100,9 @@ const styles = StyleSheet.create({
     marginTop: 0,
     overflow: 'hidden',
     borderRadius: 24,
-    backgroundColor: '#121212',
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   row: {
     flexDirection: 'row',
@@ -112,9 +114,9 @@ const styles = StyleSheet.create({
   },
   separator: {
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
+    borderBottomColor: colors.border,
   },
-  pressed: { backgroundColor: 'rgba(255,255,255,0.025)' },
+  pressed: { backgroundColor: colors.cardAlt },
   icon: {
     width: 40,
     height: 40,
@@ -123,7 +125,7 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     flex: 1,
-    color: '#fff',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '400',
     letterSpacing: 0.14,
@@ -131,7 +133,9 @@ const styles = StyleSheet.create({
   dataCard: {
     marginTop: 24,
     borderRadius: 24,
-    backgroundColor: '#121212',
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: 20,
   },
   dataHeader: {
@@ -139,18 +143,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  dataTitle: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  refresh: { color: '#93c5fd', fontSize: 14 },
+  dataTitle: { color: colors.text, fontSize: 14, fontWeight: '600' },
+  refresh: { color: colors.blue, fontSize: 14, fontWeight: '600' },
   refreshPressed: { opacity: 0.5 },
   dataText: {
-    color: 'rgba(255,255,255,0.6)',
+    color: colors.muted,
     fontSize: 14,
     lineHeight: 20,
     marginTop: 8,
   },
   firstLine: { marginTop: 12 },
   caption: {
-    color: 'rgba(255,255,255,0.35)',
+    color: colors.faint,
     fontSize: 12,
     lineHeight: 18,
     marginTop: 12,

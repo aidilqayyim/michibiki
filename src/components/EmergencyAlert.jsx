@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
-import { Modal, View, Text, Vibration, StyleSheet } from 'react-native';
+import { Modal, View, Vibration, StyleSheet } from 'react-native';
 import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { useMesh } from '../data/MeshProvider';
-import { Button, Icon } from '../ui';
+import { Button, Icon, colors, Text } from '../ui';
 
 const siren = require('../../assets/siren.wav');
 
@@ -38,7 +38,7 @@ export default function EmergencyAlert({ onShowOnMap }) {
           <View style={styles.icon}><Icon name="warning" size={44} color="#fff" /></View>
           <Text accessibilityRole="alert" style={styles.title}>EMERGENCY</Text>
           <Text style={styles.who}>{node?.name || alert.node_id || 'A Michibiki user'} needs help</Text>
-          <Text style={styles.body}>{alert.message}</Text>
+          <Text style={styles.body}>{alert.message?.replace(/^\[DEMO\]\s*/i, '')}</Text>
           <Text style={styles.meta}>
             {new Date(alert.created_at).toLocaleTimeString()}
             {hasLocation ? ' · ' + Number(alert.lat).toFixed(5) + ', ' + Number(alert.lng).toFixed(5) : ' · Location unknown'}
@@ -58,13 +58,13 @@ export default function EmergencyAlert({ onShowOnMap }) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#7f1d1df2', justifyContent: 'center', padding: 24 },
-  card: { width: '100%', maxWidth: 480, alignSelf: 'center', borderRadius: 28, backgroundColor: '#1c0a0c', borderWidth: 2, borderColor: '#ef4444', padding: 24, gap: 12, alignItems: 'stretch' },
+  screen: { flex: 1, backgroundColor: '#dc2626e6', justifyContent: 'center', padding: 24 },
+  card: { width: '100%', maxWidth: 480, alignSelf: 'center', borderRadius: 28, backgroundColor: colors.card, borderWidth: 2, borderColor: '#dc2626', padding: 24, gap: 12, alignItems: 'stretch' },
   icon: { alignSelf: 'center', width: 84, height: 84, borderRadius: 42, backgroundColor: '#dc2626', alignItems: 'center', justifyContent: 'center' },
-  title: { color: '#fecaca', fontSize: 30, fontWeight: '900', letterSpacing: 3, textAlign: 'center' },
-  who: { color: '#fff', fontSize: 20, fontWeight: '800', textAlign: 'center' },
-  body: { color: '#fecaca', fontSize: 15, lineHeight: 22, textAlign: 'center' },
-  meta: { color: '#fca5a5', fontSize: 13, textAlign: 'center' },
+  title: { color: colors.red, fontSize: 30, fontWeight: '900', letterSpacing: 3, textAlign: 'center' },
+  who: { color: colors.text, fontSize: 20, fontWeight: '800', textAlign: 'center' },
+  body: { color: colors.muted, fontSize: 15, lineHeight: 22, textAlign: 'center' },
+  meta: { color: colors.muted, fontSize: 13, textAlign: 'center' },
   primary: { marginTop: 8 },
-  secondary: { backgroundColor: '#ffffff1a' },
+  secondary: { backgroundColor: colors.cardAlt },
 });

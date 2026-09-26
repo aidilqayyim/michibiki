@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, Modal, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Pressable, Modal, StyleSheet, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMesh } from '../data/MeshProvider';
-import { Screen, Icon, s } from '../ui';
+import { Screen, Icon, s, colors, Text } from '../ui';
 import { ROLES } from '../utils/display';
 
 const coordinates = node => node.lat == null || node.lng == null
@@ -38,11 +38,11 @@ export default function Connect() {
 
   return (
     <View style={styles.flex}>
-    <Screen title="Connect" right={<View style={styles.badge}><Text style={styles.badgeText}>Demo mode</Text></View>}>
+    <Screen title="Connect" right={<View style={styles.badge}><Text style={styles.badgeText}>Mesh connection</Text></View>}>
       <Text style={styles.intro}>Bind your phone to a Michibiki device to join its LoRa mesh.</Text>
       <View style={styles.current}>
         <View style={styles.row}>
-          <View style={styles.bluetooth}><Icon name="bluetooth" size={26} color="#93c5fd" /></View>
+          <View style={styles.bluetooth}><Icon name="bluetooth" size={26} color={colors.blue} /></View>
           <View style={styles.flex}>
             <Text style={styles.eyebrow}>YOUR DEVICE</Text>
             <Text style={styles.currentTitle}>{boundDevice ? boundDevice.name : 'Ready to connect'}</Text>
@@ -90,13 +90,13 @@ export default function Connect() {
                 </View>
                 <Text style={styles.deviceInfo}>{device.role || 'Hiker'} · {device.signal} signal · {device.battery ?? '—'}% battery</Text>
               </View>
-              <Text style={[styles.selection, isBound && { color: '#6ee7b7' }, inUse && { color: '#ffffff73' }]}>{state}</Text>
+              <Text style={[styles.selection, isBound && { color: colors.green }, inUse && { color: colors.faint }]}>{state}</Text>
             </Pressable>
           );
         })}
       </View>
       {!devices.length && <Text style={styles.description}>No devices available.</Text>}
-      {!!notice && <Text accessibilityRole={failed ? 'alert' : undefined} accessibilityLiveRegion="polite" style={[styles.notice, failed && { color: '#ff999f' }]}>{notice}</Text>}
+      {!!notice && <Text accessibilityRole={failed ? 'alert' : undefined} accessibilityLiveRegion="polite" style={[styles.notice, failed && { color: colors.red }]}>{notice}</Text>}
       <Text style={styles.demoNote}>Device binding is saved in Supabase. No hardware connection is made. The Nodes tab shows all detected LoRa devices, including relays outside Bluetooth range.</Text>
       {selectedDevice && <View style={{ height: 230 }} />}
     </Screen>
@@ -109,7 +109,7 @@ export default function Connect() {
           disabled={busy} onPress={() => setRolePickerOpen(true)}
           style={({ pressed }) => [styles.dropdown, (pressed || busy) && styles.dim]}>
           <Text style={[styles.white, styles.flex]}>{role}</Text>
-          <Icon name="chevron-down" size={18} color="#ffffff99" />
+          <Icon name="chevron-down" size={18} color={colors.muted} />
         </Pressable>
         <View style={[styles.row, { marginTop: 14 }]}>
           <Pressable accessibilityRole="button" disabled={busy} onPress={() => updateBinding(selectedDevice.id)}
@@ -132,7 +132,7 @@ export default function Connect() {
               onPress={() => { setRole(option); setRolePickerOpen(false); }}
               style={({ pressed }) => [styles.roleOption, (pressed || option === role) && styles.selected]}>
               <Text style={[styles.white, styles.flex]}>{option}</Text>
-              {option === role && <Icon name="check" size={18} color="#93c5fd" />}
+              {option === role && <Icon name="check" size={18} color={colors.blue} />}
             </Pressable>
           ))}
         </Pressable>
@@ -144,43 +144,43 @@ export default function Connect() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 }, row: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  badge: { backgroundColor: '#60a5fa1a', borderRadius: 24, paddingHorizontal: 12, paddingVertical: 6 },
-  badgeText: { color: '#93c5fd', fontSize: 12, fontWeight: '600' },
-  intro: { color: '#ffffff80', fontSize: 14, lineHeight: 24, maxWidth: 512 },
-  current: { marginTop: 20, borderRadius: 28, backgroundColor: '#121212', padding: 20 },
-  bluetooth: { width: 56, height: 56, borderRadius: 28, borderWidth: 1, borderColor: '#93c5fd33', backgroundColor: '#93c5fd1a', alignItems: 'center', justifyContent: 'center' },
-  eyebrow: { color: '#ffffff66', fontSize: 12, letterSpacing: 1.2 },
-  currentTitle: { color: '#fff', fontSize: 20, fontWeight: '700', marginTop: 4 },
-  description: { color: '#ffffff80', fontSize: 14, marginTop: 4, lineHeight: 20 },
-  boundFooter: { flexDirection: 'row', alignItems: 'center', gap: 12, justifyContent: 'space-between', borderTopWidth: 1, borderColor: '#ffffff1a', paddingTop: 16, marginTop: 20 },
-  bound: { color: '#6ee7b7', fontSize: 14 }, coordinates: { color: '#ffffff59', fontSize: 12, marginTop: 4 },
-  disconnect: { borderRadius: 24, borderWidth: 1, borderColor: '#ffffff26', paddingHorizontal: 16, paddingVertical: 10, minHeight: 44, justifyContent: 'center' },
-  white: { color: '#fff', fontSize: 14 }, dim: { opacity: 0.5 },
+  badge: { backgroundColor: colors.blueSoft, borderRadius: 24, paddingHorizontal: 12, paddingVertical: 6 },
+  badgeText: { color: colors.blue, fontSize: 12, fontWeight: '600' },
+  intro: { color: colors.muted, fontSize: 14, lineHeight: 24, maxWidth: 512 },
+  current: { marginTop: 20, borderRadius: 28, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 20 },
+  bluetooth: { width: 56, height: 56, borderRadius: 28, borderWidth: 1, borderColor: '#b9cdf5', backgroundColor: colors.blueSoft, alignItems: 'center', justifyContent: 'center' },
+  eyebrow: { color: colors.faint, fontSize: 12, letterSpacing: 1.2 },
+  currentTitle: { color: colors.text, fontSize: 20, fontWeight: '700', marginTop: 4 },
+  description: { color: colors.muted, fontSize: 14, marginTop: 4, lineHeight: 20 },
+  boundFooter: { flexDirection: 'row', alignItems: 'center', gap: 12, justifyContent: 'space-between', borderTopWidth: 1, borderColor: colors.border, paddingTop: 16, marginTop: 20 },
+  bound: { color: colors.green, fontSize: 14 }, coordinates: { color: colors.faint, fontSize: 12, marginTop: 4 },
+  disconnect: { borderRadius: 24, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, paddingVertical: 10, minHeight: 44, justifyContent: 'center' },
+  white: { color: colors.text, fontSize: 14 }, dim: { opacity: 0.5 },
   listHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, marginBottom: 12, gap: 8 },
-  sectionTitle: { color: '#ffffff99', fontSize: 14, fontWeight: '600' }, count: { color: '#ffffff59', fontSize: 12 },
+  sectionTitle: { color: colors.muted, fontSize: 14, fontWeight: '600' }, count: { color: colors.faint, fontSize: 12 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12 },
-  device: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 24, borderWidth: 1, borderColor: '#ffffff1a', backgroundColor: '#ffffff09' },
-  selected: { borderColor: '#60a5fa99', backgroundColor: '#60a5fa1a' },
+  device: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 24, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card },
+  selected: { borderColor: colors.blue, backgroundColor: colors.blueSoft },
   avatar: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   deviceId: { fontSize: 14, fontWeight: '900', color: '#000' },
-  deviceName: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  deviceInfo: { marginTop: 4, fontSize: 12, color: '#ffffff73', lineHeight: 18 },
-  selection: { fontSize: 12, color: '#93c5fd' },
-  confirmation: { position: 'absolute', left: 12, right: 12, maxWidth: 620, alignSelf: 'center', borderRadius: 24, borderWidth: 1, borderColor: '#60a5fa55', backgroundColor: '#0d1726f5', padding: 18, elevation: 12, shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 16, shadowOffset: { width: 0, height: 8 } },
+  deviceName: { color: colors.text, fontSize: 16, fontWeight: '600' },
+  deviceInfo: { marginTop: 4, fontSize: 12, color: colors.muted, lineHeight: 18 },
+  selection: { fontSize: 12, color: colors.blue, fontWeight: '600' },
+  confirmation: { position: 'absolute', left: 12, right: 12, maxWidth: 620, alignSelf: 'center', borderRadius: 24, borderWidth: 1, borderColor: '#b9cdf5', backgroundColor: colors.card, padding: 18, elevation: 12, shadowColor: '#2b2118', shadowOpacity: 0.18, shadowRadius: 16, shadowOffset: { width: 0, height: 8 } },
   inUse: { opacity: 0.45 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   shrink: { flexShrink: 1 },
   pill: { fontSize: 11, fontWeight: '700', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, overflow: 'hidden' },
-  pillFree: { color: '#6ee7b7', backgroundColor: '#34d3991f' },
-  pillBound: { color: '#fbbf24', backgroundColor: '#fbbf241f' },
-  dropdown: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, borderRadius: 14, borderWidth: 1, borderColor: '#ffffff26', backgroundColor: '#ffffff0a', paddingHorizontal: 14 },
+  pillFree: { color: colors.green, backgroundColor: colors.greenSoft },
+  pillBound: { color: colors.amber, backgroundColor: colors.amberSoft },
+  dropdown: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.cardAlt, paddingHorizontal: 14 },
   roleOption: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 48, borderRadius: 14, borderWidth: 1, borderColor: 'transparent', paddingHorizontal: 14 },
-  explanation: { color: '#ffffff80', fontSize: 13, lineHeight: 20, marginTop: 6 },
-  locationLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1.4, color: '#ffffff59' },
-  bind: { borderRadius: 24, paddingHorizontal: 20, paddingVertical: 12, backgroundColor: '#60a5fa', minHeight: 44 },
-  bindText: { color: '#000', fontSize: 14, fontWeight: '700' },
+  explanation: { color: colors.muted, fontSize: 13, lineHeight: 20, marginTop: 6 },
+  locationLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1.4, color: colors.faint },
+  bind: { borderRadius: 24, paddingHorizontal: 20, paddingVertical: 12, backgroundColor: colors.blue, minHeight: 44 },
+  bindText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   cancel: { borderRadius: 24, paddingHorizontal: 20, paddingVertical: 12, minHeight: 44 },
-  cancelText: { color: '#ffffffa6', fontSize: 14 },
-  notice: { marginTop: 16, fontSize: 14, color: '#93c5fd' },
-  demoNote: { marginTop: 24, fontSize: 12, lineHeight: 20, color: '#ffffff59' },
+  cancelText: { color: colors.muted, fontSize: 14 },
+  notice: { marginTop: 16, fontSize: 14, color: colors.blue },
+  demoNote: { marginTop: 24, fontSize: 12, lineHeight: 20, color: colors.faint },
 });

@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { readPages } from "./MeshQueries";
 import { supabase } from "../supabaseClient";
-import { ensureIdentity, writeBinding, writeLocation } from "./api";
+import { ensureIdentity, writeBinding, insertDemoEmergency } from "./api";
 import { logDateKey } from "./trackingLogs";
 jest.mock("../supabaseClient", () => ({
   supabase: {
@@ -56,34 +56,20 @@ test("binding uniqueness failures return actionable errors", async () => {
   });
   await expect(writeBinding("user", "A07")).rejects.toThrow("already bound to another user");
 });
-test("GPS save writes coordinates and reports database failures", async () => {
-  const eq = jest.fn().mockReturnValue({
-    select: () => ({
-      single: async () => ({
-        error: {
-          message: "Offline"
-        }
-      })
-    })
-  });
-  const update = jest.fn().mockReturnValue({
-    eq
-  });
-  supabase.from.mockReturnValue({
-    update
-  });
-  await expect(writeLocation("B12", {
-    latitude: 3,
-    longitude: 101
-  })).rejects.toEqual({
-    message: "Offline"
-  });
-  expect(update.mock.calls[0][0]).toMatchObject({
-    lat: 3,
-    lng: 101
-  });
-  expect(eq).toHaveBeenCalledWith("id", "B12");
-});
 test("history dates use Japan's date even when Supabase returns UTC", () => {
   expect(logDateKey("2026-09-25T16:00:00Z")).toBe("2026-09-26");
+});
+
+test('retrying a saved demo emergency returns the same record rather than creating a duplicate', async () => {
+  const row = { id: 'same-id', node_id: 'B12', is_demo: true };
+  const eq = jest.fn().mockReturnValue({ single: async () => ({ data: row, error: null }) });
+  supabase.from.mockReturnValueOnce({ insert: () => ({ select: () => ({ single: async () => ({ error: { code: '23505' } }) }) }) })
+    .mockReturnValueOnce({ select: () => ({ eq }) });
+  await expect(insertDemoEmergency(row)).resolves.toEqual(row);
+  expect(eq).toHaveBeenCalledWith('id', 'same-id');
+});
+
+test('demo publication failures propagate instead of claiming an emergency was sent', async () => {
+  supabase.from.mockReturnValueOnce({ insert: () => ({ select: () => ({ single: async () => ({ error: { message: 'Offline' } }) }) }) });
+  await expect(insertDemoEmergency({ id: 'demo' })).rejects.toEqual({ message: 'Offline' });
 });

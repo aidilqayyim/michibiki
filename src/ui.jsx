@@ -1,24 +1,36 @@
-import React, { useEffect, useState } from 'react';
+import React, { createContext, forwardRef, useContext, useEffect, useState } from 'react';
 import {
   Keyboard,
   Platform,
   View,
-  Text,
+  Text as RNText,
   Pressable,
   ScrollView,
   StyleSheet,
-  TextInput,
+  TextInput as RNTextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 
 export const colors = {
-  bg: '#000000',
-  card: '#1c1c1e',
-  muted: '#99999f',
-  blue: '#79aaff',
-  purple: '#ab78ff',
-  green: '#73e69b',
+  // Light theme: cream page, white surfaces, espresso text.
+  bg: '#ede3d0',
+  card: '#ffffff',
+  cardAlt: '#f7f1e6',
+  border: '#dccfb8',
+  text: '#2b2118',
+  muted: '#6b5b4a',
+  faint: '#725f4b',
+  blue: '#1d4ed8',
+  blueSoft: '#dde7fb',
+  purple: '#7c3aed',
+  purpleSoft: '#ede4fd',
+  green: '#14713a',
+  greenSoft: '#dcf3e3',
+  red: '#b91c1c',
+  redSoft: '#fbe2df',
+  amber: '#8a5a06',
+  amberSoft: '#faefd2',
 };
 
 const paths = {
@@ -92,6 +104,58 @@ const paths = {
 
   'cloud-lightning': 'M6 16.33A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 .5 8.97M13 12l-3 5h4l-3 5',
 };
+
+// SF Pro Display, loaded in App.js. Custom fonts need one family per weight (Android will not
+// synthesise bold), so Text/TextInput below map each fontWeight to the matching file.
+export const fonts = {
+  regular: 'SFProDisplay-Regular',
+  medium: 'SFProDisplay-Medium',
+  bold: 'SFProDisplay-Bold',
+  heavy: 'SFProDisplay-Heavy',
+  black: 'SFProDisplay-Black',
+};
+
+export const fontFiles = {
+  [fonts.regular]: require('../assets/fonts/SFProDisplay-Regular.otf'),
+  [fonts.medium]: require('../assets/fonts/SFProDisplay-Medium.otf'),
+  [fonts.bold]: require('../assets/fonts/SFProDisplay-Bold.otf'),
+  [fonts.heavy]: require('../assets/fonts/SFProDisplay-Heavy.ttf'),
+  [fonts.black]: require('../assets/fonts/SFProDisplay-Black.ttf'),
+};
+
+function fontForWeight(weight) {
+  const value = weight === 'bold' ? 700 : Number(weight) || 400;
+  if (value >= 900) return fonts.black;
+  if (value >= 800) return fonts.heavy;
+  if (value >= 700) return fonts.bold;
+  if (value >= 500) return fonts.medium;
+  return fonts.regular;
+}
+
+// Nested <Text> inherits its parent's weight, as it would with the system font.
+const FontWeightContext = createContext(null);
+
+function useFontStyle(style) {
+  const inherited = useContext(FontWeightContext);
+  const flat = StyleSheet.flatten(style) || {};
+  const weight = flat.fontWeight ?? inherited ?? '400';
+  if (flat.fontFamily) return { weight, style };
+  return { weight, style: [style, { fontFamily: fontForWeight(weight), fontWeight: 'normal' }] };
+}
+
+export const Text = forwardRef(function Text({ style, ...props }, ref) {
+  const font = useFontStyle(style);
+  return (
+    <FontWeightContext.Provider value={font.weight}>
+      <RNText ref={ref} {...props} style={font.style} />
+    </FontWeightContext.Provider>
+  );
+});
+
+export const TextInput = forwardRef(function TextInput({ style, ...props }, ref) {
+  const font = useFontStyle(style);
+  return <RNTextInput ref={ref} {...props} style={font.style} />;
+});
 
 // The floating navbar reserves space at the bottom of each screen; while typing it is hidden,
 // so screens use this to drop that reserved space.
@@ -182,7 +246,7 @@ export function Button({
       style={({ pressed }) => [
         s.button,
         danger && {
-          backgroundColor: '#512329',
+          backgroundColor: colors.redSoft,
         },
         (disabled || pressed) && {
           opacity: 0.45,
@@ -193,7 +257,7 @@ export function Button({
       {icon && (
         <Icon
           name={icon}
-          color={danger ? '#ff9298' : colors.blue}
+          color={danger ? colors.red : colors.blue}
         />
       )}
 
@@ -201,7 +265,7 @@ export function Button({
         style={[
           s.buttonText,
           danger && {
-            color: '#ff9298',
+            color: colors.red,
           },
         ]}
       >
@@ -224,7 +288,7 @@ export function Screen({
   const content = (
     <>
       {centeredTitle ? <View style={[s.between, { paddingTop: 18 }]}>
-        <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#171717', borderWidth: 1, borderColor: '#ffffff1a', alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}>
           <Svg width={35} height={35} viewBox="0 0 40 40" fill="none" stroke={colors.green} strokeWidth={3} strokeLinecap="round"><Path d="M5 30 17 9M17 30 28 11 38 30" /></Svg>
         </View>
         <Text accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit style={[s.title, { flex: 1, textAlign: 'center', fontSize: 26 }]}>{title}</Text>
@@ -283,7 +347,7 @@ export function Screen({
 export function Input(props) {
   return (
     <TextInput
-      placeholderTextColor="#77777f"
+      placeholderTextColor={colors.faint}
       {...props}
       style={[
         s.input,
@@ -305,7 +369,7 @@ export function Note({
       style={[
         s.note,
         error && {
-          color: '#ff999f',
+          color: colors.red,
         },
       ]}
     >
@@ -345,9 +409,10 @@ export const s = StyleSheet.create({
   },
 
   title: {
-    color: 'white',
+    color: colors.text,
     fontSize: 36,
-    fontWeight: '900',
+    // Page titles use SF Pro Display Heavy.
+    fontWeight: '800',
   },
 
   card: {
@@ -359,7 +424,7 @@ export const s = StyleSheet.create({
   },
 
   text: {
-    color: '#f4f4f7',
+    color: colors.text,
     fontSize: 16,
   },
 
@@ -387,7 +452,7 @@ export const s = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#15243a',
+    backgroundColor: colors.blueSoft,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -401,8 +466,10 @@ export const s = StyleSheet.create({
   },
 
   input: {
-    color: 'white',
+    color: colors.text,
     backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
     borderRadius: 16,
     padding: 14,
     fontSize: 16,
@@ -426,7 +493,7 @@ export const s = StyleSheet.create({
 
   overlay: {
     flex: 1,
-    backgroundColor: '#000a',
+    backgroundColor: '#2b211866',
     justifyContent: 'center',
     padding: 24,
   },

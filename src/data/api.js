@@ -38,18 +38,6 @@ export async function writeBinding(userId, nodeId) {
   } = await query;
   if (error) throw new Error(error.code === "23505" ? "That device is already bound to another user. Choose another device." : error.message);
 }
-export async function writeLocation(nodeId, coords) {
-  const {
-    data,
-    error
-  } = await supabase.from("nodes").update({
-    lat: coords.latitude,
-    lng: coords.longitude,
-    last_seen: new Date().toISOString()
-  }).eq("id", nodeId).select().single();
-  if (error) throw error;
-  return data;
-}
 export async function writeRole(nodeId, role) {
   const {
     data,
@@ -67,6 +55,17 @@ export async function insertRow(table, row) {
   } = await supabase.from(table).insert(row).select().single();
   if (error) throw error;
   return data;
+}
+// Reusing the simulation ID makes a retry safe if the first write succeeded but its response was lost.
+export async function insertDemoEmergency(row) {
+  try {
+    return await insertRow('emergency_alerts', row);
+  } catch (error) {
+    if (error.code !== '23505') throw error;
+    const result = await supabase.from('emergency_alerts').select('*').eq('id', row.id).single();
+    if (result.error) throw result.error;
+    return result.data;
+  }
 }
 export async function createChannelRows(name, nodeIds) {
   const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "channel";

@@ -12,7 +12,7 @@ export const directKey = peerId => 'direct:' + peerId;
 // A channel with no members is open to every device.
 export const isChannelVisible = (channel, boundId) => !channel.memberIds?.length || channel.memberIds.includes(boundId);
 
-export function conversationKey(message, boundId) {
+function conversationKey(message, boundId) {
   if (message.channel_id) return channelKey(message.channel_id);
   if (message.recipient_node_id === boundId) return directKey(message.sender_node_id);
   return null;

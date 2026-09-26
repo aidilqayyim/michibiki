@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, ScrollView, Pressable, Modal, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
+import { View, ScrollView, Pressable, Modal, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { useMesh } from '../data/MeshProvider';
 import { useReadState, channelKey, directKey, isChannelVisible } from '../data/readState';
-import { Screen, Button, Input, Note, Icon, s, colors, useKeyboardVisible } from '../ui';
+import { Screen, Button, Input, Note, Icon, s, colors, useKeyboardVisible, Text } from '../ui';
 
 function timeLabel(timestamp) {
   const date = new Date(timestamp);
@@ -47,7 +47,7 @@ function Bubble({ own, author, body, time, status, onRetry, onDiscard }) {
         {own && (
           <View style={styles.status}>
             {status === 'sent' && <Icon name="check" size={12} color={colors.green} />}
-            <Text style={[styles.metaText, failed && { color: '#ff999f' }]}>{statusText}</Text>
+            <Text style={[styles.metaText, failed && { color: colors.red }]}>{statusText}</Text>
           </View>
         )}
       </View>
@@ -72,7 +72,7 @@ function ChannelPicker({ visible, channels, selected, unread, onSelect, onClose 
                 accessibilityRole="button"
                 accessibilityState={{ selected: channel.id === selected }}
                 onPress={() => onSelect(channel.id)}
-                style={({ pressed }) => [styles.option, (pressed || channel.id === selected) && { backgroundColor: '#253c57' }]}
+                style={({ pressed }) => [styles.option, (pressed || channel.id === selected) && { backgroundColor: colors.blueSoft }]}
               >
                 <Text style={[s.text, { flex: 1 }]}>{channel.name}</Text>
                 {!!unread[channelKey(channel.id)] && <UnreadDot style={styles.inlineDot} />}
@@ -150,7 +150,7 @@ function CreateChannelDialog({ visible, nodes, boundId, onCreate, onClose }) {
                     accessibilityState={{ checked, disabled: own || saving }}
                     disabled={own || saving}
                     onPress={() => toggle(node.id)}
-                    style={({ pressed }) => [styles.option, pressed && { backgroundColor: '#ffffff12' }]}
+                    style={({ pressed }) => [styles.option, pressed && { backgroundColor: colors.cardAlt }]}
                   >
                     <Avatar node={node} size={34} />
                     <View style={{ flex: 1 }}>
@@ -158,7 +158,7 @@ function CreateChannelDialog({ visible, nodes, boundId, onCreate, onClose }) {
                       {own && <Text style={s.muted}>This device</Text>}
                     </View>
                     <View style={[styles.checkbox, checked && styles.checkboxOn]}>
-                      {checked && <Icon name="check" size={16} color="#000" />}
+                      {checked && <Icon name="check" size={16} color="#fff" />}
                     </View>
                   </Pressable>
                 );
@@ -166,7 +166,7 @@ function CreateChannelDialog({ visible, nodes, boundId, onCreate, onClose }) {
             </ScrollView>
             <Note error>{error}</Note>
             <View style={s.row}>
-              <Button title="Cancel" disabled={saving} onPress={close} style={{ flex: 1, backgroundColor: '#2c2c2e' }} />
+              <Button title="Cancel" disabled={saving} onPress={close} style={{ flex: 1, backgroundColor: colors.cardAlt }} />
               <Button title={saving ? 'Creating…' : 'Create'} disabled={saving || !ready} onPress={create} style={{ flex: 1 }} />
             </View>
           </View>
@@ -263,7 +263,7 @@ export default function Chat({ navigation }) {
             <View key={id} style={{ flex: 1 }}>
               <Button
                 title={title}
-                style={{ backgroundColor: mode === id ? '#253c57' : '#1c1c1e' }}
+                style={{ backgroundColor: mode === id ? colors.blueSoft : colors.card, borderWidth: 1, borderColor: mode === id ? '#b9cdf5' : colors.border }}
                 onPress={() => {
                   setMode(id);
                   setPeerId(null);
@@ -327,7 +327,7 @@ export default function Chat({ navigation }) {
                   accessibilityRole="button"
                   accessibilityLabel={'Chat with ' + node.name}
                   onPress={() => setPeerId(node.id)}
-                  style={({ pressed }) => [styles.chatRow, index > 0 && styles.separator, pressed && { backgroundColor: '#ffffff0d' }]}
+                  style={({ pressed }) => [styles.chatRow, index > 0 && styles.separator, pressed && { backgroundColor: colors.cardAlt }]}
                 >
                   <Avatar node={node} />
                   <View style={{ flex: 1 }}>
@@ -336,7 +336,7 @@ export default function Chat({ navigation }) {
                       {last && <Text style={[styles.metaText, hasUnread(directKey(node.id)) && { color: colors.blue }]}>{timeLabel(last.sent_at)}</Text>}
                     </View>
                     <View style={s.between}>
-                      <Text numberOfLines={1} style={[s.muted, { marginTop: 2, flex: 1 }, hasUnread(directKey(node.id)) && { color: '#fff', fontWeight: '600' }]}>
+                      <Text numberOfLines={1} style={[s.muted, { marginTop: 2, flex: 1 }, hasUnread(directKey(node.id)) && { color: colors.text, fontWeight: '600' }]}>
                         {last ? (last.sender_node_id === boundId ? 'You: ' : '') + last.body : ''}
                       </Text>
                       {hasUnread(directKey(node.id)) && <UnreadDot style={styles.inlineDot} />}
@@ -431,22 +431,22 @@ const styles = StyleSheet.create({
   avatar: { alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#000', fontSize: 13, fontWeight: '800' },
   bubble: { maxWidth: '85%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, marginBottom: 10 },
-  ownBubble: { alignSelf: 'flex-end', backgroundColor: '#163e2b', borderBottomRightRadius: 6 },
-  otherBubble: { alignSelf: 'flex-start', backgroundColor: '#252529', borderBottomLeftRadius: 6 },
-  failedBubble: { borderWidth: 1, borderColor: '#ff999f80' },
+  ownBubble: { alignSelf: 'flex-end', backgroundColor: colors.greenSoft, borderBottomRightRadius: 6 },
+  otherBubble: { alignSelf: 'flex-start', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderBottomLeftRadius: 6 },
+  failedBubble: { borderWidth: 1, borderColor: colors.red },
   author: { fontSize: 12, fontWeight: '600' },
   meta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 },
   metaText: { color: colors.muted, fontSize: 11 },
   status: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   dropdown: { flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 16, backgroundColor: colors.card, paddingHorizontal: 16 },
-  iconButton: { width: 48, height: 48, borderRadius: 16, backgroundColor: '#15243a', alignItems: 'center', justifyContent: 'center' },
+  iconButton: { width: 48, height: 48, borderRadius: 16, backgroundColor: colors.blueSoft, alignItems: 'center', justifyContent: 'center' },
   option: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 12 },
-  checkbox: { width: 24, height: 24, borderRadius: 7, borderWidth: 2, borderColor: '#ffffff40', alignItems: 'center', justifyContent: 'center' },
+  checkbox: { width: 24, height: 24, borderRadius: 7, borderWidth: 2, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   checkboxOn: { backgroundColor: colors.green, borderColor: colors.green },
   chatRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 4 },
-  separator: { borderTopWidth: 1, borderTopColor: '#ffffff1a' },
-  unreadDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#3b82f6' },
-  cornerDot: { position: 'absolute', top: 6, left: 8, borderWidth: 2, borderColor: '#000' },
+  separator: { borderTopWidth: 1, borderTopColor: colors.border },
+  unreadDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#2563eb' },
+  cornerDot: { position: 'absolute', top: 6, left: 8, borderWidth: 2, borderColor: colors.bg },
   inlineDot: { marginLeft: 8 },
   composer: { marginTop: 10 },
 });

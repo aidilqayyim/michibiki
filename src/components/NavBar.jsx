@@ -1,17 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  Animated,
-  AccessibilityInfo,
-  StyleSheet,
-} from "react-native";
+import { View, Pressable, Animated, AccessibilityInfo, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 
-import { Icon, colors, useKeyboardVisible } from "../ui";
+import { Icon, colors, useKeyboardVisible, Text } from "../ui";
 import { useReadState } from "../data/readState";
+
+// Each tab gets a fixed-width slot; the bar is as wide as its tabs (and shrinks on narrow screens).
+const ITEM_WIDTH = 100;
+const BAR_PADDING = 6;
 
 const icons = {
   Chat: "chat",
@@ -98,7 +95,7 @@ export default function NavBar({ state, navigation }) {
   // Hidden while typing so it never floats above the keyboard or pushes inputs up.
   if (keyboardVisible) return null;
 
-  const horizontalPadding = 6;
+  const horizontalPadding = BAR_PADDING;
 
   const availableWidth =
     width > 0 ? width - horizontalPadding * 2 : 0;
@@ -130,12 +127,13 @@ export default function NavBar({ state, navigation }) {
         style={[
           styles.navbarOuter,
           {
+            width: state.routes.length * ITEM_WIDTH + BAR_PADDING * 2,
             transform: [{ scale }],
           },
         ]}
       >
         <BlurView
-          intensity={isMapPage ? 10 : 25}
+          intensity={isMapPage ? 10 : 20}
           tint="light"
           style={StyleSheet.absoluteFill}
         />
@@ -146,8 +144,8 @@ export default function NavBar({ state, navigation }) {
             StyleSheet.absoluteFill,
             {
               backgroundColor: isMapPage
-                ? "rgba(0,0,0,0.35)"
-                : "rgba(255,255,255,0.10)",
+                ? "rgba(255,255,255,0.55)"
+                : "rgba(255,255,255,0.55)",
             },
           ]}
         />
@@ -187,7 +185,7 @@ export default function NavBar({ state, navigation }) {
                 !isActive &&
                   pressed && {
                     backgroundColor:
-                      "rgba(255,255,255,0.10)",
+                      "rgba(43,33,24,0.06)",
                   },
               ]}
             >
@@ -197,7 +195,7 @@ export default function NavBar({ state, navigation }) {
                   color={
                     isActive
                       ? colors.blue
-                      : "rgba(255,255,255,0.80)"
+                      : colors.muted
                   }
                   size={25}
                 />
@@ -211,7 +209,7 @@ export default function NavBar({ state, navigation }) {
                   {
                     color: isActive
                       ? colors.blue
-                      : "rgba(255,255,255,0.80)",
+                      : colors.muted,
                   },
                 ]}
               >
@@ -229,8 +227,8 @@ const styles = StyleSheet.create({
   wrapper: {
     position: "absolute",
 
-    left: 22,
-    right: 22,
+    left: 24,
+    right: 24,
 
     alignItems: "center",
 
@@ -239,8 +237,7 @@ const styles = StyleSheet.create({
   },
 
   navbarOuter: {
-    width: "100%",
-    maxWidth: 360,
+    maxWidth: "100%",
 
     minHeight: 70,
 
@@ -251,7 +248,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
 
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
+    borderColor: colors.border,
 
     overflow: "hidden",
 
@@ -260,7 +257,7 @@ const styles = StyleSheet.create({
       width: 0,
       height: 8,
     },
-    shadowOpacity: 0.37,
+    shadowOpacity: 0.16,
     shadowRadius: 16,
 
     elevation: 12,
@@ -280,9 +277,9 @@ const styles = StyleSheet.create({
   activeHighlight: {
     height: "100%",
 
-    borderRadius: 999,
+    borderRadius: 27,
 
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: colors.blueSoft,
   },
 
   navItem: {
@@ -294,7 +291,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
 
-    borderRadius: 999,
+    borderRadius: 27,
 
     zIndex: 2,
   },
@@ -316,9 +313,9 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#3b82f6",
+    backgroundColor: "#2563eb",
     borderWidth: 1.5,
-    borderColor: "#111",
+    borderColor: "#fff",
   },
 
   label: {

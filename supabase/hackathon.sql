@@ -148,6 +148,17 @@ on conflict (id) do nothing;
 -- Bindings and alerts intentionally start empty: create them through user actions.
 commit;
 
+-- Realtime: new messages and emergency alerts reach other phones instantly.
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'messages') then
+    alter publication supabase_realtime add table public.messages;
+  end if;
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'emergency_alerts') then
+    alter publication supabase_realtime add table public.emergency_alerts;
+  end if;
+end $$;
+
 -- Verify seeded data in the SQL Editor.
 select 'nodes' as table_name, count(*) as row_count from public.nodes
 union all select 'tracking_logs', count(*) from public.tracking_logs

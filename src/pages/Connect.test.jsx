@@ -8,7 +8,6 @@ import { meshFixture } from '../test/meshFixture';
 jest.mock('../data/api', () => ({
   ensureIdentity: jest.fn(),
   writeBinding: jest.fn(),
-  writeLocation: jest.fn(),
   writeRole: jest.fn(),
   insertRow: jest.fn()
 }));
