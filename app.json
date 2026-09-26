@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Michibiki",
+    "slug": "michibiki",
+    "version": "1.0.0",
+    "orientation": "default",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.michibiki.app"
+    },
+    "android": {
+      "package": "com.michibiki.app"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Michibiki to update your connected device with your phone’s location."
+        }
+      ],
+      "expo-audio"
+    ]
+  }
+}

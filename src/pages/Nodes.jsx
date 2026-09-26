@@ -1,199 +1,178 @@
-import React, { useMemo, useState } from "react";
-import { useMesh } from "../data/MeshProvider";
-import { distanceBetweenNodes, formatDistance } from "../utils/mapHelpers";
-import { lastSeenLabel } from "../utils/display";
-import PageHeader from "../components/PageHeader";
-import { Link } from "react-router-dom";
-import { FiFileText } from "react-icons/fi";
+import React, { useMemo, useState } from 'react';
+import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { useMesh } from '../data/MeshProvider';
+import { Screen, Icon } from '../ui';
+import { distanceBetweenNodes, formatDistance } from '../utils/mapHelpers';
+import { lastSeenLabel, signalInfo } from '../utils/display';
+import { useWeather } from '../data/weather';
 
-// --- small inline icons, kept consistent with the search icon's stroke style ---
-
-function LockIcon({ locked }) {
-  return locked ? (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 stroke-emerald-400" fill="none" strokeWidth="2">
-      <rect x="5" y="11" width="14" height="9" rx="2" />
-      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-    </svg>
-  ) : (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 stroke-amber-400" fill="none" strokeWidth="2">
-      <rect x="5" y="11" width="14" height="9" rx="2" />
-      <path d="M8 11V7a4 4 0 0 1 7.2-2.4" />
-    </svg>
-  );
+function hasLocation(node) {
+  return node && node.lat != null && node.lng != null
+    && Number.isFinite(Number(node.lat)) && Number.isFinite(Number(node.lng));
 }
 
-function ClockIcon() {
+function Detail({ icon, color = '#ffffff73', children }) {
   return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0 stroke-white/45" fill="none" strokeWidth="2">
-      <circle cx="12" cy="12" r="8" />
-      <path d="M12 8v4l3 2" />
-    </svg>
+    <View style={styles.detailRow}>
+      <Icon name={icon} size={14} color={color} />
+      <Text style={styles.detailText}>{children}</Text>
+    </View>
   );
 }
 
-function PhoneIcon() {
+function SignalBar({ signal }) {
+  const { level, color, label } = signalInfo(signal);
   return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0 stroke-white/45" fill="none" strokeWidth="2">
-      <rect x="7" y="3" width="10" height="18" rx="2" />
-      <path d="M11 18h2" />
-    </svg>
+    <View style={styles.signalRow}>
+      <Text style={styles.signalLabel}>Signal {label}</Text>
+      <View
+        accessible
+        accessibilityRole="progressbar"
+        accessibilityLabel={'Signal ' + label}
+        accessibilityValue={{ min: 0, max: 100, now: Math.round(level * 100) }}
+        style={styles.signalTrack}
+      >
+        {level > 0 && <View style={{ width: level * 100 + '%', height: 8, borderRadius: 4, backgroundColor: color }} />}
+      </View>
+      <View style={[styles.signalDot, { backgroundColor: color }]} />
+    </View>
   );
 }
 
-function SignalBarsIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0 stroke-white/45" fill="none" strokeWidth="2">
-      <path d="M5 18v-3M10 18v-6M15 18v-9M20 18v-12" strokeLinecap="round" />
-    </svg>
-  );
-}
+export default function Nodes({ navigation }) {
+  const { nodes, boundId, refresh } = useMesh();
+  const connected = nodes.find(node => node.id === boundId);
+  const [query, setQuery] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const weather = useWeather(nodes);
 
-function BatteryIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-3 w-3 shrink-0 fill-white/65" stroke="none">
-      <rect x="2" y="7" width="17" height="10" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <rect x="20" y="10" width="2" height="4" rx="1" />
-      <rect x="4" y="9" width="12" height="6" rx="1" />
-    </svg>
-  );
-}
-
-export default function Nodes() {
-  const { nodes: nodesData, boundId } = useMesh();
-  const connected = nodesData.find((node) => node.id === boundId);
-  const [query, setQuery] = useState("");
-
-  const filteredNodes = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-
-    if (!normalizedQuery) {
-      return nodesData;
+  async function refreshNodes() {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await refresh();
+    } finally {
+      setRefreshing(false);
     }
-
-    return nodesData.filter((node) =>
-      `${node.name} ${node.role} ${node.id}`
-        .toLowerCase()
-        .includes(normalizedQuery)
-    );
-  }, [query, nodesData]);
+  }
+  const filteredNodes = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return nodes.filter(node => (node.name + ' ' + node.role + ' ' + node.id).toLowerCase().includes(normalized));
+  }, [nodes, query]);
 
   return (
-    <main className="min-h-screen bg-black text-white">
-      <div className="mx-auto min-h-screen w-full max-w-[880px] px-5 pb-32">
-        <PageHeader
-          title={`Nodes (${filteredNodes.length})`}
-          centeredTitle
-          rightContent={
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-white/55">
-              Nodes {nodesData.length}
-            </div>
-          }
-        />
-
-        <p className="mt-3 text-center text-sm text-white/45">Nearby devices detected on the LoRa mesh</p>
-
-        <div className="mt-5 flex items-center gap-3 rounded-2xl border border-white/10 bg-[#171717] px-4 py-3.5">
-          <svg
-            viewBox="0 0 24 24"
-            className="h-5 w-5 shrink-0 stroke-white/70"
-            fill="none"
-            strokeWidth="2"
-          >
-            <circle cx="11" cy="11" r="7" />
-            <path d="m20 20-3.5-3.5" />
-          </svg>
-
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
+    <Screen
+      title={'Nodes (' + filteredNodes.length + ')'}
+      centeredTitle
+      right={<View style={styles.countBadge}><Text style={styles.countText}>Nodes: {nodes.length}</Text></View>}
+    >
+      <Text style={styles.subtitle}>Nearby devices detected on the LoRa mesh</Text>
+      <View style={styles.toolbar}>
+        <View style={styles.search}>
+          <Icon name="search" size={20} color="#ffffffb3" />
+          <TextInput
+            accessibilityLabel="Find a node"
             placeholder="Find a node"
-            className="w-full bg-transparent text-base text-white outline-none placeholder:text-white/40"
+            placeholderTextColor="#ffffff66"
+            value={query}
+            onChangeText={setQuery}
+            autoCorrect={false}
+            style={styles.searchInput}
           />
-        </div>
-
-        <div className="mt-4">
-          {filteredNodes.map((node, idx) => {
-            const signalIsGood = node.signal === "Good" || node.signal === "Strong";
-
-            return (
-              <article
-                key={node.id}
-                className={`flex gap-4 py-4 ${idx !== 0 ? "border-t border-white/10" : ""}`}
-              >
-                <div className="shrink-0 flex flex-col items-center">
-                  <div
-                    className="grid h-[74px] w-[74px] place-items-center rounded-full text-lg font-extrabold text-black"
-                    style={{ backgroundColor: node.color }}
-                  >
-                    {node.id}
-                  </div>
-
-                  <div className="mt-2 flex items-center gap-1 text-xs text-white/65">
-                    <BatteryIcon />
-                    <span>{node.battery}%</span>
-                  </div>
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <LockIcon locked={node.locked} />
-                    <h2 className="truncate text-[17px] font-bold">{node.name}</h2>
-                    <Link to={`/logs?node=${node.id}`} aria-label={`View ${node.name} logs`} title="Tracking logs" className="ml-auto grid h-10 w-10 shrink-0 place-items-center rounded-full text-blue-300 hover:bg-white/10"><FiFileText size={20} /></Link>
-                  </div>
-
-                  <div className="mt-1.5 flex items-center gap-2 text-[13px] text-white/50">
-                    <ClockIcon />
-                    <span>{lastSeenLabel(node.last_seen)}</span>
-                  </div>
-
-                  <div className="mt-1.5 flex items-center gap-2 text-[13px] text-white/50">
-                    <PhoneIcon />
-                    <span>Role: {node.role}</span>
-                  </div>
-
-                  <div className="mt-1.5 flex items-center gap-2 text-[13px] text-white/50">
-                    <SignalBarsIcon />
-                    <span>
-                      {connected ? formatDistance(distanceBetweenNodes(connected, node)) + " away" : "Distance unavailable"} · {node.hops} hop{node.hops > 1 ? "s" : ""}
-                    </span>
-                  </div>
-
-                  <div className="mt-3 flex items-center gap-3">
-                    <span className="whitespace-nowrap text-xs font-semibold text-white/55">
-                      Signal {node.signal}
-                    </span>
-
-                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
-                      <div
-                        className={`h-full rounded-full ${
-                          signalIsGood
-                            ? "w-[86%] bg-gradient-to-r from-rose-500 via-amber-300 to-emerald-400"
-                            : "w-[42%] bg-gradient-to-r from-rose-500 to-amber-300"
-                        }`}
-                      />
-                    </div>
-
-                    <span
-                      className={`h-2.5 w-2.5 shrink-0 rounded-full ${
-                        signalIsGood ? "bg-emerald-300" : "bg-amber-300"
-                      }`}
-                    />
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-
-        {filteredNodes.length === 0 && (
-          <div className="mt-16 text-center">
-            <p className="text-lg font-bold">No nodes found</p>
-            <p className="mt-2 text-sm text-white/40">
-              Try searching using a node name, ID, or role.
-            </p>
-          </div>
-        )}
-      </div>
-    </main>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Refresh nodes"
+          accessibilityState={{ busy: refreshing, disabled: refreshing }}
+          disabled={refreshing}
+          onPress={refreshNodes}
+          style={({ pressed }) => [styles.refreshButton, pressed && { backgroundColor: '#ffffff1a' }]}
+        >
+          {refreshing ? <ActivityIndicator color="#93c5fd" /> : <Icon name="refresh" size={20} color="#93c5fd" />}
+        </Pressable>
+      </View>
+      <View style={styles.list}>
+        {filteredNodes.map((node, index) => (
+          <View key={node.id} style={[styles.nodeRow, index > 0 && styles.separator]}>
+            <View style={styles.avatarColumn}>
+              <View style={[styles.avatar, { backgroundColor: node.color || '#4ade80' }]}>
+                <Text style={styles.nodeId}>{node.id}</Text>
+              </View>
+              <View style={styles.battery}>
+                <Icon name="battery" size={12} color="#ffffffa6" />
+                <Text style={styles.batteryText}>{node.battery ?? '—'}%</Text>
+              </View>
+            </View>
+            <View style={styles.info}>
+              <View style={styles.nameRow}>
+                <Icon name={node.locked ? 'lock' : 'unlock'} size={14} color={node.locked ? '#34d399' : '#fbbf24'} />
+                <Text numberOfLines={1} style={styles.name}>{node.name}</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={'Logs for ' + node.id}
+                  accessibilityHint={'View ' + node.name + ' tracking logs'}
+                  onPress={() => navigation.navigate('Logs', { nodeId: node.id })}
+                  style={({ pressed }) => [styles.logsButton, pressed && { backgroundColor: '#ffffff1a' }]}
+                >
+                  <Icon name="logs" size={20} color="#93c5fd" />
+                </Pressable>
+              </View>
+              <Detail icon="clock">{lastSeenLabel(node.last_seen)}</Detail>
+              {hasLocation(node) && (
+                <Detail icon={weather[node.id]?.icon || 'cloud'} color={weather[node.id]?.color}>
+                  {weather[node.id]
+                    ? weather[node.id].label + ' · ' + weather[node.id].temperature + '°C · wind ' + weather[node.id].wind + ' km/h'
+                    : node.id in weather ? 'Weather unavailable' : 'Loading weather…'}
+                </Detail>
+              )}
+              <Detail icon="smartphone">Role: {node.role}</Detail>
+              <Detail icon="signal">
+                {hasLocation(connected) && hasLocation(node)
+                  ? formatDistance(distanceBetweenNodes(connected, node)) + ' away'
+                  : 'Distance unavailable'} · {node.hops ?? 0} {(node.hops ?? 0) === 1 ? 'hop' : 'hops'}
+              </Detail>
+              <SignalBar signal={node.signal} />
+            </View>
+          </View>
+        ))}
+      </View>
+      {!filteredNodes.length && (
+        <View style={styles.empty}>
+          <Text style={styles.emptyTitle}>No nodes found</Text>
+          <Text style={styles.emptyHint}>Try searching using a node name, ID, or role.</Text>
+        </View>
+      )}
+    </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  countBadge: { borderRadius: 16, borderWidth: 1, borderColor: '#ffffff1a', backgroundColor: '#ffffff0a', paddingHorizontal: 12, paddingVertical: 8 },
+  countText: { color: '#ffffff8c', fontSize: 12 },
+  subtitle: { marginTop: 12, textAlign: 'center', color: '#ffffff73', fontSize: 14 },
+  toolbar: { marginTop: 20, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  refreshButton: { width: 52, height: 52, borderRadius: 16, borderWidth: 1, borderColor: '#ffffff1a', backgroundColor: '#171717', alignItems: 'center', justifyContent: 'center' },
+  search: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 16, borderWidth: 1, borderColor: '#ffffff1a', backgroundColor: '#171717', paddingHorizontal: 16, paddingVertical: 10 },
+  searchInput: { flex: 1, minHeight: 30, paddingVertical: 4, fontSize: 16, color: '#fff' },
+  list: { marginTop: 16 },
+  nodeRow: { flexDirection: 'row', gap: 16, paddingVertical: 16 },
+  separator: { borderTopWidth: 1, borderTopColor: '#ffffff1a' },
+  avatarColumn: { alignItems: 'center' },
+  avatar: { width: 74, height: 74, borderRadius: 37, alignItems: 'center', justifyContent: 'center' },
+  nodeId: { color: '#000', fontSize: 18, fontWeight: '800' },
+  battery: { marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  batteryText: { color: '#ffffffa6', fontSize: 12 },
+  info: { flex: 1 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  name: { flex: 1, color: '#fff', fontSize: 17, fontWeight: '700' },
+  logsButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  detailRow: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  detailText: { flex: 1, fontSize: 13, lineHeight: 19, color: '#ffffff80' },
+  signalRow: { marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  signalLabel: { color: '#ffffff8c', fontSize: 12, fontWeight: '600', flexShrink: 1 },
+  signalTrack: { height: 8, flex: 1, minWidth: 24, borderRadius: 4, overflow: 'hidden', backgroundColor: '#ffffff1a' },
+  signalDot: { width: 10, height: 10, borderRadius: 5 },
+  empty: { marginTop: 64, alignItems: 'center' },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#fff' },
+  emptyHint: { marginTop: 8, fontSize: 14, color: '#ffffff66', textAlign: 'center' },
+});

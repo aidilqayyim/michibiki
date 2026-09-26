@@ -11,7 +11,7 @@ begin;
 create table if not exists public.nodes (
   id text primary key,
   name text not null,
-  role text not null default 'Hiker' check (role in ('Hiker', 'Relay')),
+  role text not null default 'Hiker' check (role in ('Hiker', 'Relay', 'Base Station')),
   lat double precision not null check (lat between -90 and 90),
   lng double precision not null check (lng between -180 and 180),
   battery smallint not null default 100 check (battery between 0 and 100),
@@ -70,6 +70,14 @@ create table if not exists public.channels (
   created_at timestamptz not null default now()
 );
 
+-- 5b. Devices added to a channel. A channel with no members is open to every device.
+create table if not exists public.channel_members (
+  channel_id text not null references public.channels(id) on delete cascade,
+  node_id text not null references public.nodes(id) on delete cascade,
+  added_at timestamptz not null default now(),
+  primary key (channel_id, node_id)
+);
+
 -- 6. A message goes to either a channel or a node, never both.
 create table if not exists public.messages (
   id uuid primary key default gen_random_uuid(),
@@ -87,14 +95,14 @@ create index if not exists messages_sender_idx on public.messages (sender_node_i
 
 -- Explicit API permissions. RLS is not enabled by this script.
 revoke all on public.nodes, public.tracking_logs, public.device_bindings,
-  public.emergency_alerts, public.channels, public.messages from anon, authenticated;
+  public.emergency_alerts, public.channels, public.channel_members, public.messages from anon, authenticated;
 grant usage on schema public to anon, authenticated;
-grant select on public.nodes, public.tracking_logs, public.channels, public.messages to anon, authenticated;
+grant select on public.nodes, public.tracking_logs, public.channels, public.channel_members, public.messages to anon, authenticated;
 grant select, insert, update, delete on public.device_bindings to anon, authenticated;
 grant select, insert on public.emergency_alerts to anon, authenticated;
 grant update (status) on public.emergency_alerts to anon, authenticated;
-grant insert on public.tracking_logs, public.messages to anon, authenticated;
-grant update (lat, lng, battery, signal, hops, last_seen) on public.nodes to anon, authenticated;
+grant insert on public.tracking_logs, public.messages, public.channels, public.channel_members to anon, authenticated;
+grant update (lat, lng, battery, signal, hops, last_seen, role) on public.nodes to anon, authenticated;
 
 -- Existing node cards and map coordinates.
 insert into public.nodes (id, name, role, lat, lng, battery, signal, hops, color, locked, bindable, last_seen)

@@ -1,193 +1,334 @@
-import React, { useEffect, useRef } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  View,
+  Text,
+  Pressable,
+  Animated,
+  AccessibilityInfo,
+  StyleSheet,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BlurView } from "expo-blur";
 
-const navItems = [
-  { label: "Chat", path: "/chat", icon: "chat" },
-  { label: "Nodes", path: "/nodes", icon: "nodes" },
-  { label: "Map", path: "/map", icon: "map" },
-  { label: "Connect", path: "/connect", icon: "connect" },
-  { label: "Settings", path: "/settings", icon: "settings" },
-];
+import { Icon, colors, useKeyboardVisible } from "../ui";
+import { useReadState } from "../data/readState";
 
-function NavIcon({ name }) {
-  const commonProps = {
-    className: "h-7 w-7",
-    viewBox: "0 0 24 30",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 1.9,
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    "aria-hidden": true,
-  };
+const icons = {
+  Chat: "chat",
+  Nodes: "nodes",
+  Map: "map",
+  Connect: "radio-tower",
+  Settings: "settings",
+};
 
-  if (name === "connect") {
-    return (
-      <svg {...commonProps}>
-        <path
-          d="m10 13 4-4M8 15l-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0M16 9l1-1a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0"
-          transform="translate(0 -1)"
-        />
-      </svg>
-    );
-  }
+export default function NavBar({ state, navigation }) {
+  const inset = useSafeAreaInsets();
+  const keyboardVisible = useKeyboardVisible();
+  const { anyUnread } = useReadState();
 
-  if (name === "chat") {
-    return (
-      <svg {...commonProps}>
-        <path d="M4 5.5A3.5 3.5 0 0 1 7.5 2h9A3.5 3.5 0 0 1 20 5.5v6A3.5 3.5 0 0 1 16.5 15H11l-4.8 4.1c-.7.6-1.8.1-1.7-.8l.5-3.6A3.5 3.5 0 0 1 4 12V5.5Z" />
-      </svg>
-    );
-  }
+  const scale = useRef(new Animated.Value(1)).current;
+  const position = useRef(new Animated.Value(state.index)).current;
 
-  if (name === "nodes") {
-    return (
-      <svg {...commonProps}>
-        <rect x="7" y="4" width="10" height="16" rx="2" />
-        <path d="M9 2h6M9 22h6M9.5 8h5M9.5 11h5M9.5 14h5" />
-      </svg>
-    );
-  }
+  const [width, setWidth] = useState(0);
+  const [reducedMotion, setReducedMotion] = useState(false);
 
-  if (name === "map") {
-    return (
-      <svg {...commonProps}>
-        <path d="m3 5 5-2 8 3 5-2v15l-5 2-8-3-5 2V5Z" />
-        <path d="M8 3v15M16 6v15" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg {...commonProps}>
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 0 0-1.7-1L14.5 3h-5L9.2 6a7 7 0 0 0-1.7 1L5.1 6 3 9.5 5.1 11a7 7 0 0 0 0 2L3 14.5 5.1 18l2.4-1a7 7 0 0 0 1.7 1l.3 3h5l.3-3a7 7 0 0 0 1.7-1l2.4 1 2.1-3.5-2.1-1.5c.1-.3.1-.7.1-1Z" />
-    </svg>
-  );
-}
-
-export default function NavBar() {
-  const { pathname } = useLocation();
-
-  const navRef = useRef(null);
-  const popRef = useRef(null);
-
-  const activeIndex = navItems.findIndex(
-    (item) => item.path === pathname
-  );
-
-  const isMapPage = pathname === "/map";
+  const currentRoute = state.routes[state.index]?.name;
+  const isMapPage = currentRoute === "Map";
 
   useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReducedMotion);
+
+    const subscription = AccessibilityInfo.addEventListener(
+      "reduceMotionChanged",
+      setReducedMotion
+    );
+
     return () => {
-      popRef.current?.cancel();
+      subscription?.remove();
     };
   }, []);
 
-  const popNavbar = (event) => {
-    if (
-      event.metaKey ||
-      event.ctrlKey ||
-      event.shiftKey ||
-      event.altKey
-    ) {
+  useEffect(() => {
+    if (reducedMotion) {
+      position.setValue(state.index);
       return;
     }
 
-    if (
-      window.matchMedia(
-        "(prefers-reduced-motion: reduce)"
-      ).matches
-    ) {
+    Animated.timing(position, {
+      toValue: state.index,
+      duration: 230,
+      useNativeDriver: true,
+    }).start();
+  }, [state.index, position, reducedMotion]);
+
+  const handleNavPress = (route) => {
+    const event = navigation.emit({
+      type: "tabPress",
+      target: route.key,
+      canPreventDefault: true,
+    });
+
+    if (event.defaultPrevented) {
       return;
     }
 
-    popRef.current?.cancel();
+    navigation.navigate(route.name);
 
-    popRef.current =
-      navRef.current?.animate(
-        [
-          {
-            transform: "scale(1)",
-          },
-          {
-            transform: "scale(1.035)",
-          },
-          {
-            transform: "scale(1)",
-          },
-        ],
-        {
-          duration: 320,
-          easing: "ease-in-out",
-        }
-      );
+    if (reducedMotion) {
+      return;
+    }
+
+    scale.stopAnimation();
+    scale.setValue(1);
+
+    Animated.sequence([
+      Animated.timing(scale, {
+        toValue: 1.035,
+        duration: 110,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scale, {
+        toValue: 1,
+        duration: 170,
+        useNativeDriver: true,
+      }),
+    ]).start();
   };
 
+  // Hidden while typing so it never floats above the keyboard or pushes inputs up.
+  if (keyboardVisible) return null;
+
+  const horizontalPadding = 6;
+
+  const availableWidth =
+    width > 0 ? width - horizontalPadding * 2 : 0;
+
+  const itemWidth =
+    availableWidth > 0
+      ? availableWidth / state.routes.length
+      : 0;
+
+  const translateX =
+    itemWidth > 0
+      ? Animated.multiply(position, itemWidth)
+      : 0;
+
   return (
-    <div className="fixed bottom-[max(30px,env(safe-area-inset-bottom))] left-1/2 z-50 w-[calc(100%-24px)] max-w-[620px] -translate-x-1/2">
-
-      <nav
-        ref={navRef}
-        aria-label="Main navigation"
-        className={`relative grid grid-cols-5 gap-1 rounded-full border border-white/10 p-1.5 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] backdrop-blur-[2px] ${
-          isMapPage
-            ? "bg-black/35"
-            : "bg-white/10"
-        }`}
+    <View
+      pointerEvents="box-none"
+      style={[
+        styles.wrapper,
+        {
+          bottom: Math.max(inset.bottom, 30),
+        },
+      ]}
+    >
+      <Animated.View
+        onLayout={(event) => {
+          setWidth(event.nativeEvent.layout.width);
+        }}
+        style={[
+          styles.navbarOuter,
+          {
+            transform: [{ scale }],
+          },
+        ]}
       >
+        <BlurView
+          intensity={isMapPage ? 10 : 25}
+          tint="light"
+          style={StyleSheet.absoluteFill}
+        />
 
-        {/* ACTIVE ITEM BACKGROUND */}
+        <View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              backgroundColor: isMapPage
+                ? "rgba(0,0,0,0.35)"
+                : "rgba(255,255,255,0.10)",
+            },
+          ]}
+        />
 
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-1.5"
-        >
-          <span
-            className="nav-active-highlight block h-full w-[calc((100%-16px)/5)] rounded-full bg-white/15"
-            style={{
-              opacity:
-                activeIndex < 0
-                  ? 0
-                  : 1,
-
-              transform:
-                `translateX(calc(${Math.max(
-                  0,
-                  activeIndex
-                ) * 100}% + ${Math.max(
-                  0,
-                  activeIndex
-                ) * 4}px))`,
-            }}
-          />
-        </div>
-
-        {/* NAVIGATION ITEMS */}
-
-        {navItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            onClick={popNavbar}
-            className={({ isActive }) =>
-              `relative z-10 flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-0 rounded-full text-[12px] font-[500] tracking-wide transition-colors duration-200 motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300 ${
-                isActive
-                  ? "text-blue-300"
-                  : "text-white/80 hover:bg-white/10"
-              }`
-            }
+        {width > 0 && (
+          <View
+            pointerEvents="none"
+            style={styles.highlightContainer}
           >
-            <NavIcon name={item.icon} />
+            <Animated.View
+              style={[
+                styles.activeHighlight,
+                {
+                  width: itemWidth,
+                  transform: [{ translateX }],
+                },
+              ]}
+            />
+          </View>
+        )}
 
-            <span className="mt-[-2px]">
-              {item.label}
-            </span>
-          </NavLink>
-        ))}
+        {state.routes.map((route, index) => {
+          const isActive = state.index === index;
+          const unreadDot = route.name === "Chat" && anyUnread;
 
-      </nav>
+          return (
+            <Pressable
+              key={route.key}
+              accessibilityRole="tab"
+              accessibilityLabel={route.name + (unreadDot ? ", unread messages" : "")}
+              accessibilityState={{
+                selected: isActive,
+              }}
+              onPress={() => handleNavPress(route)}
+              style={({ pressed }) => [
+                styles.navItem,
+                !isActive &&
+                  pressed && {
+                    backgroundColor:
+                      "rgba(255,255,255,0.10)",
+                  },
+              ]}
+            >
+              <View style={styles.iconContainer}>
+                <Icon
+                  name={icons[route.name] ?? "settings"}
+                  color={
+                    isActive
+                      ? colors.blue
+                      : "rgba(255,255,255,0.80)"
+                  }
+                  size={25}
+                />
+                {unreadDot && <View testID="chat-unread-dot" style={styles.unreadDot} />}
+              </View>
 
-    </div>
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.label,
+                  {
+                    color: isActive
+                      ? colors.blue
+                      : "rgba(255,255,255,0.80)",
+                  },
+                ]}
+              >
+                {route.name}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </Animated.View>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  wrapper: {
+    position: "absolute",
+
+    left: 22,
+    right: 22,
+
+    alignItems: "center",
+
+    zIndex: 50,
+    elevation: 50,
+  },
+
+  navbarOuter: {
+    width: "100%",
+    maxWidth: 360,
+
+    minHeight: 70,
+
+    flexDirection: "row",
+
+    padding: 6,
+
+    borderRadius: 999,
+
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+
+    overflow: "hidden",
+
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.37,
+    shadowRadius: 16,
+
+    elevation: 12,
+  },
+
+  highlightContainer: {
+    position: "absolute",
+
+    left: 6,
+    right: 6,
+    top: 6,
+    bottom: 6,
+
+    flexDirection: "row",
+  },
+
+  activeHighlight: {
+    height: "100%",
+
+    borderRadius: 999,
+
+    backgroundColor: "rgba(255,255,255,0.15)",
+  },
+
+  navItem: {
+    flex: 1,
+
+    minWidth: 0,
+    minHeight: 48,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    borderRadius: 999,
+
+    zIndex: 2,
+  },
+
+  iconContainer: {
+    width: 0,
+    height: 34,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    overflow: "visible",
+  },
+
+  unreadDot: {
+    position: "absolute",
+    top: 1,
+    left: 8,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#3b82f6",
+    borderWidth: 1.5,
+    borderColor: "#111",
+  },
+
+  label: {
+    marginTop: 1,
+
+    fontSize: 12,
+    fontWeight: "500",
+
+    letterSpacing: 0.3,
+
+    textAlign: "center",
+  },
+});

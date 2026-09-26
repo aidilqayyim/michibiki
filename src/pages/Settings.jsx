@@ -1,85 +1,158 @@
-import React from "react";
-import { FiInfo, FiBookOpen, FiSettings, FiRadio, FiMap, FiDisc, FiSmartphone } from "react-icons/fi";
-
-import PageHeader from "../components/PageHeader";
-import { useMesh } from "../data/MeshProvider";
+﻿import React from 'react';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMesh } from '../data/MeshProvider';
+import { Icon, Screen } from '../ui';
 
 const settingsRows = [
-  {
-    title: "About Michibiki",
-    icon: FiInfo,
-    subtitle: "Hackathon prototype information",
-  },
-  {
-    title: "Help & Documentation",
-    icon: FiBookOpen,
-    subtitle: "Quick start and field usage",
-  },
-  {
-    title: "App Settings",
-    icon: FiSettings,
-    subtitle: "Theme, notifications and units",
-  },
-  {
-    title: "Local Mesh Discovery",
-    icon: FiRadio,
-    subtitle: "Find nearby BLE and LoRa nodes",
-  },
-  {
-    title: "Routes",
-    icon: FiMap,
-    subtitle: "Saved routes and waypoints",
-  },
-  {
-    title: "Route Recorder",
-    icon: FiDisc,
-    subtitle: "Record breadcrumb trail",
-  },
-  {
-    title: "Device Profiles",
-    icon: FiSmartphone,
-    subtitle: "Hiker, relay and base profiles",
-  },
+  { title: 'About Michibiki', icon: 'info', action: 'about' },
+  { title: 'Help & Documentation', icon: 'book', action: 'help' },
+  { title: 'App Settings', icon: 'settings', action: 'preferences' },
+  { title: 'Local Mesh Discovery', icon: 'radio', action: 'nodes' },
+  { title: 'Routes', icon: 'map', action: 'routes' },
+  { title: 'Route Recorder', icon: 'disc', action: 'recorder' },
+  { title: 'Device Profiles', icon: 'smartphone', action: 'profiles' },
 ];
 
-export default function Settings() {
+export default function Settings({ navigation }) {
   const { nodes, boundId, alerts, refresh } = useMesh();
+
+  function openSetting(action) {
+    switch (action) {
+      case 'about':
+        Alert.alert('About Michibiki', 'Guidance for your mesh. A hackathon companion for LoRa location tracking across forests and other environments.');
+        break;
+      case 'help':
+        Alert.alert('Help & Documentation', 'Connect a device, then open Map. The arrow locates your bound device. Phone GPS is optional. Tracking logs show previously recorded positions. Messages and emergency alerts are saved to Supabase; radio delivery is not implemented.');
+        break;
+      case 'nodes':
+        navigation.navigate('Nodes');
+        break;
+      case 'routes':
+        navigation.navigate('Logs', { nodeId: 'all' });
+        break;
+      case 'preferences':
+        Alert.alert('App Settings', 'The app currently uses a dark theme and metric distances. Theme, notification and unit controls are not available yet.');
+        break;
+      case 'recorder':
+        Alert.alert('Route Recorder', 'Live route recording is not available yet. Open Routes to view tracking records stored in Supabase.');
+        break;
+      case 'profiles':
+        Alert.alert('Device Profiles', 'Device roles come from Supabase. View each device in Nodes, or bind your device in Connect. Profile editing is not available yet.');
+        break;
+      default:
+        break;
+    }
+  }
+
   return (
-    <main className="min-h-screen bg-black text-white">
-      <div className="mx-auto min-h-screen w-full max-w-[880px] px-5 pb-32">
-        <PageHeader title="Settings" />
+    <Screen title="Settings">
+      <View style={styles.settingsCard}>
+        {settingsRows.map((item, index) => (
+          <Pressable
+            key={item.title}
+            accessibilityRole="button"
+            onPress={() => openSetting(item.action)}
+            style={({ pressed }) => [
+              styles.row,
+              index < settingsRows.length - 1 && styles.separator,
+              pressed && styles.pressed,
+            ]}
+          >
+            <View style={styles.icon}>
+              <Icon name={item.icon} size={20} color="#3b82f6" />
+            </View>
+            <Text style={styles.rowTitle}>{item.title}</Text>
+            <Icon name="chevron" size={20} color="rgba(255,255,255,0.25)" />
+          </Pressable>
+        ))}
+      </View>
 
-        <section className="mt-4 overflow-hidden rounded-3xl bg-[#121212]">
-          {settingsRows.map((item, index) => (
-            <button
-              key={item.title}
-              className={`flex w-full items-center gap-3 px-5 py-1 text-left transition hover:bg-white/[0.025] ${
-                index === settingsRows.length - 1
-                  ? ""
-                  : "border-b border-white/10"
-              }`}
-            >
-              <div className="grid h-10 w-10 shrink-0 place-items-center text-sm text-blue-500">
-                <item.icon className="h-5 w-5" aria-hidden="true" />
-              </div>
-
-              <div className="min-w-0 flex-1 ">
-                <div className="font-normal text-sm tracking-[0.010em]">{item.title}</div>
-              </div>
-
-              <span className="text-2xl text-white/25">›</span>
-            </button>
-          ))}
-        </section>
-        <section className="mt-6 rounded-3xl bg-[#121212] p-5 text-sm">
-          <div className="flex items-center justify-between"><h2 className="font-semibold">Mesh data</h2><button onClick={refresh} className="text-blue-300">Refresh</button></div>
-          <p className="mt-3 text-white/60">{nodes.length} devices in Supabase</p>
-          <p className="mt-2 text-white/60">Bound device: {boundId || "None"}</p>
-          <p className="mt-2 text-white/60">Your saved emergency alerts: {alerts.length}</p>
-          <p className="mt-3 text-xs text-white/35">Refreshes every 15 seconds while the app is visible.</p>
-        </section>
-      </div>
-
-    </main>
+      <View style={styles.dataCard}>
+        <View style={styles.dataHeader}>
+          <Text style={styles.dataTitle}>Mesh data</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Refresh mesh data"
+            onPress={refresh}
+            hitSlop={12}
+            style={({ pressed }) => pressed && styles.refreshPressed}
+          >
+            <Text style={styles.refresh}>Refresh</Text>
+          </Pressable>
+        </View>
+        <Text style={[styles.dataText, styles.firstLine]}>
+          {nodes.length} devices in Supabase
+        </Text>
+        <Text style={styles.dataText}>Bound device: {boundId || 'None'}</Text>
+        <Text style={styles.dataText}>
+          Your saved emergency alerts: {alerts.length}
+        </Text>
+        <Text style={styles.caption}>
+          Refreshes every 15 seconds while the app is visible.
+        </Text>
+      </View>
+    </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  settingsCard: {
+    marginTop: 0,
+    overflow: 'hidden',
+    borderRadius: 24,
+    backgroundColor: '#121212',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 48,
+    paddingHorizontal: 20,
+    paddingVertical: 4,
+  },
+  separator: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  pressed: { backgroundColor: 'rgba(255,255,255,0.025)' },
+  icon: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowTitle: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '400',
+    letterSpacing: 0.14,
+  },
+  dataCard: {
+    marginTop: 24,
+    borderRadius: 24,
+    backgroundColor: '#121212',
+    padding: 20,
+  },
+  dataHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dataTitle: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  refresh: { color: '#93c5fd', fontSize: 14 },
+  refreshPressed: { opacity: 0.5 },
+  dataText: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 8,
+  },
+  firstLine: { marginTop: 12 },
+  caption: {
+    color: 'rgba(255,255,255,0.35)',
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 12,
+  },
+});

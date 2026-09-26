@@ -1,35 +1,49 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Settings from './pages/Settings';
-import Map from './pages/Map';
-import Nodes from './pages/Nodes';
-import Chat from './pages/Chat';
-import Connect from './pages/Connect';
-import Logs from './pages/Logs';
-import NavBar from './components/NavBar';
-import PageTransition from './components/PageTransition';
+import { StatusBar } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { NavigationContainer, DarkTheme, createNavigationContainerRef } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import MeshProvider from './data/MeshProvider';
-
-function App() {
-  return (
-    <BrowserRouter>
-      <MeshProvider>
-      <PageTransition>
-      {(location) => <Routes location={location}>
-        <Route path="/" element={<Navigate to="/map" replace />} />
-        <Route path="/map" element={<Map />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/connect" element={<Connect />} />
-        <Route path="/nodes" element={<Nodes />} />
-        <Route path="/logs" element={<Logs />} />
-        <Route path="/chat" element={<Chat />} />
-        <Route path="*" element={<Navigate to="/map" replace />} />
-      </Routes>}
-      </PageTransition>
-      <NavBar />
-      </MeshProvider>
-    </BrowserRouter>
-  );
+import NavBar from './components/NavBar';
+import Chat from './pages/Chat';
+import Nodes from './pages/Nodes';
+import Map from './pages/Map';
+import Connect from './pages/Connect';
+import Settings from './pages/Settings';
+import Logs from './pages/Logs';
+import EmergencyAlert from './components/EmergencyAlert';
+import { ReadStateProvider } from './data/readState';
+const Tab = createBottomTabNavigator();
+const navigationRef = createNavigationContainerRef();
+const Stack = createNativeStackNavigator();
+function Tabs() {
+  return <Tab.Navigator initialRouteName="Map" tabBar={props => <NavBar {...props} />} screenOptions={{
+    headerShown: false,
+    sceneStyle: {
+      backgroundColor: '#000'
+    },
+    animation: 'none'
+  }}><Tab.Screen name="Chat" component={Chat} /><Tab.Screen name="Nodes" component={Nodes} /><Tab.Screen name="Map" component={Map} /><Tab.Screen name="Connect" component={Connect} /><Tab.Screen name="Settings" component={Settings} /></Tab.Navigator>;
 }
-
-export default App;
+export default function App() {
+  return <SafeAreaProvider><StatusBar barStyle="light-content" backgroundColor="#000" /><MeshProvider><ReadStateProvider><NavigationContainer ref={navigationRef} theme={{
+        ...DarkTheme,
+        colors: {
+          ...DarkTheme.colors,
+          background: '#000',
+          card: '#1c1c1e'
+        }
+      }}><Stack.Navigator screenOptions={{
+          headerShown: false,
+          contentStyle: {
+            backgroundColor: '#000'
+          },
+          animation: 'slide_from_right'
+        }}><Stack.Screen name="Main" component={Tabs} /><Stack.Screen name="Logs" component={Logs} /></Stack.Navigator><EmergencyAlert onShowOnMap={nodeId => navigationRef.isReady() && navigationRef.navigate('Main', {
+          screen: 'Map',
+          params: {
+            focusNodeId: nodeId
+          }
+        })} /></NavigationContainer></ReadStateProvider></MeshProvider></SafeAreaProvider>;
+}
